@@ -13,7 +13,7 @@ import httpx
 
 from locusmeter import db
 
-BWL_API_BASE = os.getenv("BWL_API_BASE", "https://api.buildwithlocus.com")
+BWL_API_BASE = os.getenv("BWL_API_BASE", "https://beta-api.buildwithlocus.com")
 BWL_API_KEY = os.getenv("BWL_API_KEY", "")
 GHCR_IMAGE = os.getenv("GHCR_IMAGE", "ghcr.io/0xshae/locusmeter-research:latest")
 
