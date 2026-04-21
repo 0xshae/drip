@@ -152,7 +152,7 @@ async def provision(user_id: str) -> dict:
         deploy_resp.raise_for_status()
         deployment = deploy_resp.json()
 
-        # Mark user as active (will be confirmed by polling)
+        # Mark user as active
         await db.set_status(user_id, "active")
 
         return {
