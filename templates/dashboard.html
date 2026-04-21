@@ -1,0 +1,222 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<section class="section">
+    <div class="section-title">
+        <span>📊</span> Agent Dashboard
+    </div>
+
+    <!-- Stats Row -->
+    <div class="grid-3" style="margin-bottom: 24px;">
+        <div class="card">
+            <div class="card-title">Active Users</div>
+            <div class="stat-value">{{ users|selectattr('status', 'in', ['active', 'low_credit'])|list|length }}</div>
+            <div class="stat-label">containers running</div>
+        </div>
+        <div class="card">
+            <div class="card-title">Paused</div>
+            <div class="stat-value" style="color: var(--warning);">{{ users|selectattr('status', 'equalto', 'paused')|list|length }}</div>
+            <div class="stat-label">awaiting recharge</div>
+        </div>
+        <div class="card">
+            <div class="card-title">Total Users</div>
+            <div class="stat-value">{{ users|length }}</div>
+            <div class="stat-label">all time</div>
+        </div>
+    </div>
+
+    <!-- Two-column layout -->
+    <div class="grid-2">
+        <!-- Users Panel -->
+        <div>
+            <div class="card" style="margin-bottom: 20px;">
+                <div class="card-title">👥 Users</div>
+                {% if users %}
+                    {% for user in users %}
+                    <div class="user-row">
+                        <div>
+                            <div style="font-weight: 500;">{{ user.user_id }}</div>
+                            <div style="font-size: 12px; color: var(--text-muted);">{{ user.topic }}</div>
+                        </div>
+                        <div>
+                            {% set pct = (user.balance_usdc / user.initial_balance * 100) if user.initial_balance > 0 else 0 %}
+                            <div class="meter-container">
+                                <div class="meter-bar">
+                                    <div class="meter-fill {% if pct > 30 %}healthy{% elif pct > 10 %}warning{% else %}critical{% endif %}"
+                                         style="width: {{ pct }}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="user-balance {% if pct > 30 %}healthy{% elif pct > 10 %}warning{% else %}critical{% endif %}">
+                            ${{ "%.2f"|format(user.balance_usdc) }}
+                        </div>
+                        <div>
+                            {% if user.status == 'active' %}
+                                <span class="badge badge-active">● Active</span>
+                            {% elif user.status == 'low_credit' %}
+                                <span class="badge badge-warning">⚠ Low</span>
+                            {% elif user.status == 'paused' %}
+                                <span class="badge badge-paused">⏸ Paused</span>
+                            {% elif user.status == 'restoring' %}
+                                <span class="badge badge-restoring">🔄 Restoring</span>
+                            {% else %}
+                                <span class="badge badge-provisioning">⏳ {{ user.status }}</span>
+                            {% endif %}
+                        </div>
+                        <div style="text-align: right;">
+                            {% if user.status == 'active' or user.status == 'low_credit' %}
+                                <button class="btn btn-danger" style="font-size: 11px; padding: 4px 10px;"
+                                        hx-post="/teardown?user_id={{ user.user_id }}"
+                                        hx-swap="none"
+                                        hx-confirm="Force teardown {{ user.user_id }}?">
+                                    Teardown
+                                </button>
+                            {% elif user.status == 'paused' %}
+                                <button class="btn btn-success" style="font-size: 11px; padding: 4px 10px;"
+                                        hx-post="/restore?user_id={{ user.user_id }}"
+                                        hx-swap="none">
+                                    Restore
+                                </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🌊</div>
+                        <p>No users yet. Provision one below!</p>
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Provision Form -->
+            <div class="card">
+                <div class="card-title">➕ Provision New User</div>
+                <form hx-post="/provision" hx-swap="none" hx-on::after-request="window.location.reload()">
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label class="form-label">User ID</label>
+                            <input class="form-input" name="user_id" placeholder="alice_01" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Email</label>
+                            <input class="form-input" name="email" type="email" placeholder="alice@example.com" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Research Topic</label>
+                        <input class="form-input" name="topic" placeholder="AI agent infrastructure trends" required>
+                    </div>
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label class="form-label">Initial Balance (USDC)</label>
+                            <input class="form-input" name="initial_balance" type="number" step="0.01" value="1.00" min="0.10">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Credit Rate (USDC/cycle)</label>
+                            <input class="form-input" name="credit_rate" type="number" step="0.01" value="0.05" min="0.01">
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 12px; margin-top: 8px;">
+                        <button type="submit" class="btn btn-primary">Provision Container</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Agent Reasoning Log -->
+        <div>
+            <div class="card" style="position: sticky; top: 80px;">
+                <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
+                    <span>🧠 Agent Reasoning Log</span>
+                    <span class="htmx-indicator" style="font-size: 12px; color: var(--accent-primary);">
+                        updating...
+                    </span>
+                </div>
+                <div id="agent-logs"
+                     class="log-container"
+                     hx-get="/logs"
+                     hx-trigger="every 2s"
+                     hx-swap="innerHTML">
+                    {% for log in logs %}
+                    <div class="log-entry {% if '⚠️' in log.message or 'WARNING' in log.message %}warning{% elif 'error' in log.message|lower or 'failed' in log.message|lower %}error{% elif '💰' in log.message or 'provisioned' in log.message %}success{% else %}system{% endif %} fade-in">
+                        <span class="log-ts">{{ log.ts }}</span>
+                        <span class="log-user">{{ log.user_id or 'system' }}</span>
+                        <span class="log-msg">{{ log.message }}</span>
+                    </div>
+                    {% endfor %}
+                    {% if not logs %}
+                    <div class="empty-state" style="padding: 24px;">
+                        <p>Agent starting up... logs will appear here.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Demo Controls -->
+    <div class="card" style="margin-top: 24px;">
+        <div class="card-title">🎮 Demo Controls</div>
+        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+            <button class="btn btn-primary"
+                    hx-post="/demo/drain"
+                    hx-swap="none"
+                    hx-confirm="Start demo drain? This will simulate credit depletion.">
+                ▶️ Start Demo Drain
+            </button>
+            <button class="btn btn-secondary"
+                    hx-post="/demo/topup"
+                    hx-swap="none">
+                💰 Simulate Top-Up
+            </button>
+            <button class="btn btn-secondary"
+                    hx-post="/demo/research"
+                    hx-swap="none">
+                🔬 Trigger Research
+            </button>
+        </div>
+        <div style="margin-top: 12px; font-size: 12px; color: var(--text-muted);">
+            Demo drain compresses the full lifecycle into ~2 minutes: 
+            active → low credit warning → budget reduction → teardown → top-up → restore
+        </div>
+    </div>
+</section>
+
+<script>
+    // Auto-scroll log container to bottom on new entries
+    const logContainer = document.getElementById('agent-logs');
+    if (logContainer) {
+        const observer = new MutationObserver(() => {
+            logContainer.scrollTop = logContainer.scrollHeight;
+        });
+        observer.observe(logContainer, { childList: true, subtree: true });
+    }
+
+    // Render log entries from JSON response
+    document.body.addEventListener('htmx:afterSwap', function(evt) {
+        if (evt.detail.target.id === 'agent-logs') {
+            const logs = evt.detail.target;
+            try {
+                const data = JSON.parse(logs.textContent);
+                if (Array.isArray(data)) {
+                    logs.innerHTML = data.map(log => {
+                        let cls = 'system';
+                        if (log.message.includes('⚠️') || log.message.includes('WARNING')) cls = 'warning';
+                        else if (log.message.toLowerCase().includes('error') || log.message.toLowerCase().includes('failed')) cls = 'error';
+                        else if (log.message.includes('💰') || log.message.includes('provisioned')) cls = 'success';
+
+                        return `<div class="log-entry ${cls} fade-in">
+                            <span class="log-ts">${log.ts}</span>
+                            <span class="log-user">${log.user_id || 'system'}</span>
+                            <span class="log-msg">${log.message}</span>
+                        </div>`;
+                    }).join('');
+                }
+            } catch(e) { /* Not JSON, leave as-is */ }
+        }
+    });
+</script>
+{% endblock %}

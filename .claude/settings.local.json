@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "WebFetch(domain:beta.paywithlocus.com)"
+      "WebFetch(domain:beta.paywithlocus.com)",
+      "Bash(~/.claude/skills/gstack/bin/gstack-review-read *)"
     ]
   }
 }

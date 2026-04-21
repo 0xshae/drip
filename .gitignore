@@ -1,0 +1,50 @@
+# Agent files
+
+.agents
+
+.claude
+
+.gstack
+
+# GSTACK files
+
+locus_context.md
+
+locus_documentation_context.md
+
+main-reviews.jsonl
+
+resources-shown.jsonl
+
+shagunprasad-main-eng-plan-20260420-213103.md
+
+shagunprasad-unknown-design-20260420-162229.md
+
+timeline.jsonl
+
+# Environment variables
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+venv/
+.venv/
+
+# SQLite
+*.db
+*.sqlite
+*.sqlite3
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

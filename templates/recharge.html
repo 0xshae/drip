@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}Recharge Credits{% endblock %}
+
+{% block content %}
+<section class="section">
+    <div class="section-title">
+        <span>💰</span> Recharge Credits
+    </div>
+
+    <div class="grid-2">
+        <!-- Recharge Form -->
+        <div class="card">
+            <div class="card-title">Top Up Credits</div>
+            <form id="recharge-form">
+                <div class="form-group">
+                    <label class="form-label">User ID</label>
+                    <input class="form-input" id="recharge-user-id" name="user_id" 
+                           placeholder="alice_01" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Amount (USDC)</label>
+                    <input class="form-input" id="recharge-amount" name="amount" 
+                           type="number" step="0.50" value="5.00" min="1.00" max="100.00" required>
+                </div>
+                <div style="margin-top: 16px;">
+                    <button type="submit" class="btn btn-primary" id="recharge-btn">
+                        Create Checkout Session
+                    </button>
+                </div>
+            </form>
+
+            <div id="checkout-result" style="margin-top: 20px; display: none;">
+                <div style="padding: 16px; background: var(--success-bg); border: 1px solid var(--success); border-radius: var(--radius-sm);">
+                    <div style="font-weight: 600; color: var(--success); margin-bottom: 8px;">
+                        ✅ Checkout Session Created
+                    </div>
+                    <div style="font-size: 13px; color: var(--text-secondary);">
+                        Session ID: <code id="checkout-session-id" style="color: var(--accent-primary);"></code>
+                    </div>
+                    <div style="margin-top: 12px;">
+                        <a id="checkout-link" href="#" target="_blank" class="btn btn-primary">
+                            Open Checkout Page →
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Info -->
+        <div class="card">
+            <div class="card-title">How It Works</div>
+            <div style="font-size: 14px; color: var(--text-secondary); line-height: 1.8;">
+                <p><strong>1.</strong> Enter a user ID and top-up amount</p>
+                <p><strong>2.</strong> A Locus Checkout session is created</p>
+                <p><strong>3.</strong> Pay with USDC via the checkout page</p>
+                <p><strong>4.</strong> Webhook confirms payment → credits added</p>
+                <p><strong>5.</strong> If the user was paused → container auto-restores</p>
+            </div>
+
+            <div style="margin-top: 20px; padding: 16px; background: var(--info-bg); border: 1px solid var(--info); border-radius: var(--radius-sm); font-size: 13px; color: var(--info);">
+                💡 Powered by <strong>Locus Checkout</strong> — USDC payments on Base with zero gas fees for Locus Wallet users.
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+    document.getElementById('recharge-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('recharge-btn');
+        btn.textContent = 'Creating...';
+        btn.disabled = true;
+
+        try {
+            const resp = await fetch('/checkout/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    user_id: document.getElementById('recharge-user-id').value,
+                    amount: parseFloat(document.getElementById('recharge-amount').value),
+                }),
+            });
+
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            const data = await resp.json();
+
+            document.getElementById('checkout-session-id').textContent = data.session_id;
+            document.getElementById('checkout-link').href = data.checkout_url;
+            document.getElementById('checkout-result').style.display = 'block';
+        } catch (err) {
+            alert('Failed to create checkout session: ' + err.message);
+        } finally {
+            btn.textContent = 'Create Checkout Session';
+            btn.disabled = false;
+        }
+    });
+</script>
+{% endblock %}
