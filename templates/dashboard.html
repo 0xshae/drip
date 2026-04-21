@@ -94,34 +94,35 @@
             <!-- Provision Form -->
             <div class="card">
                 <div class="card-title">➕ Provision New User</div>
-                <form hx-post="/provision" hx-swap="none" hx-on::after-request="window.location.reload()">
+                <form id="provision-form">
                     <div class="grid-2">
                         <div class="form-group">
                             <label class="form-label">User ID</label>
-                            <input class="form-input" name="user_id" placeholder="alice_01" required>
+                            <input class="form-input" id="prov-user-id" placeholder="alice_01" required>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Email</label>
-                            <input class="form-input" name="email" type="email" placeholder="alice@example.com" required>
+                            <input class="form-input" id="prov-email" type="email" placeholder="alice@example.com" required>
                         </div>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Research Topic</label>
-                        <input class="form-input" name="topic" placeholder="AI agent infrastructure trends" required>
+                        <input class="form-input" id="prov-topic" placeholder="AI agent infrastructure trends" required>
                     </div>
                     <div class="grid-2">
                         <div class="form-group">
                             <label class="form-label">Initial Balance (USDC)</label>
-                            <input class="form-input" name="initial_balance" type="number" step="0.01" value="1.00" min="0.10">
+                            <input class="form-input" id="prov-balance" type="number" step="0.01" value="1.00" min="0.10">
                         </div>
                         <div class="form-group">
                             <label class="form-label">Credit Rate (USDC/cycle)</label>
-                            <input class="form-input" name="credit_rate" type="number" step="0.01" value="0.05" min="0.01">
+                            <input class="form-input" id="prov-rate" type="number" step="0.01" value="0.05" min="0.01">
                         </div>
                     </div>
                     <div style="display: flex; gap: 12px; margin-top: 8px;">
-                        <button type="submit" class="btn btn-primary">Provision Container</button>
+                        <button type="submit" class="btn btn-primary" id="provision-btn">Provision Container</button>
                     </div>
+                    <div id="provision-result" style="margin-top: 12px; display: none;"></div>
                 </form>
             </div>
         </div>
@@ -186,6 +187,44 @@
 </section>
 
 <script>
+    // Provision form — submit as JSON
+    document.getElementById('provision-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('provision-btn');
+        const resultDiv = document.getElementById('provision-result');
+        btn.textContent = 'Provisioning...';
+        btn.disabled = true;
+
+        try {
+            const resp = await fetch('/provision', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    user_id: document.getElementById('prov-user-id').value,
+                    email: document.getElementById('prov-email').value,
+                    topic: document.getElementById('prov-topic').value,
+                    initial_balance: parseFloat(document.getElementById('prov-balance').value),
+                    credit_rate: parseFloat(document.getElementById('prov-rate').value),
+                }),
+            });
+
+            if (!resp.ok) {
+                const err = await resp.json();
+                throw new Error(err.detail || `HTTP ${resp.status}`);
+            }
+
+            resultDiv.innerHTML = '<div style="color: var(--success); font-size: 13px;">✅ User provisioned! Reloading...</div>';
+            resultDiv.style.display = 'block';
+            setTimeout(() => window.location.reload(), 1500);
+        } catch (err) {
+            resultDiv.innerHTML = `<div style="color: var(--danger); font-size: 13px;">❌ ${err.message}</div>`;
+            resultDiv.style.display = 'block';
+        } finally {
+            btn.textContent = 'Provision Container';
+            btn.disabled = false;
+        }
+    });
+
     // Auto-scroll log container to bottom on new entries
     const logContainer = document.getElementById('agent-logs');
     if (logContainer) {
