@@ -48,7 +48,13 @@ def request(method: str, path: str, data: dict = None) -> dict:
     req = urllib.request.Request(url, data=body, headers=headers, method=method)
     try:
         with urllib.request.urlopen(req, timeout=30) as resp:
-            return json.loads(resp.read())
+            raw = resp.read()
+            try:
+                return json.loads(raw)
+            except json.JSONDecodeError:
+                # BWL health check proxy returns plain text
+                text = raw.decode().strip()
+                return {"raw": text, "status": "ok" if text == "healthy" else text}
     except urllib.error.HTTPError as e:
         body = e.read().decode()
         return {"error": True, "status": e.code, "body": body}
