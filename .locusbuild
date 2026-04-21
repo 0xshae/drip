@@ -1,6 +1,7 @@
 {
   "services": {
     "drip": {
+      "path": ".",
       "port": 8080,
       "healthCheck": "/health",
       "env": {
