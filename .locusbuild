@@ -1,23 +1,8 @@
 {
-  "services": [
-    {
-      "name": "drip",
-      "source": {
-        "type": "github"
-      },
-      "buildConfig": {
-        "method": "dockerfile",
-        "dockerfile": "Dockerfile"
-      },
-      "runtime": {
-        "port": 8080,
-        "cpu": 256,
-        "memory": 512,
-        "minInstances": 1,
-        "maxInstances": 1
-      },
-      "healthCheckPath": "/health",
-      "autoDeploy": true,
+  "services": {
+    "drip": {
+      "port": 8080,
+      "healthCheck": "/health",
       "env": {
         "MOCK_DRAIN": "true",
         "POLL_INTERVAL_SECONDS": "60",
@@ -25,5 +10,5 @@
         "BWL_API_BASE": "https://beta-api.buildwithlocus.com"
       }
     }
-  ]
+  }
 }
