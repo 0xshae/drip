@@ -194,6 +194,16 @@ async def get_state():
 
 # ---------- Dashboard (HTMX UI) ----------
 
+@app.get("/debug/env")
+async def debug_env():
+    """Debug endpoint to check env vars."""
+    import os
+    return {
+        "LOCUS_API_KEY": os.getenv("LOCUS_API_KEY", "missing"),
+        "BWL_API_KEY": os.getenv("BWL_API_KEY", "missing"),
+        "AGENTMAIL_INBOX": os.getenv("AGENTMAIL_INBOX", "missing"),
+    }
+
 @app.get("/dashboard", response_class=HTMLResponse)
 async def dashboard(request: Request):
     """Main HTMX dashboard."""
