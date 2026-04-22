@@ -171,8 +171,13 @@ async def teardown(user_id: str):
     container just stops running. State survives in managed Postgres.
     """
     user = await db.get_user(user_id)
-    if not user or not user.get("bwl_service_id"):
-        await db.add_log(user_id, "teardown skipped — no service ID found")
+    if not user:
+        return
+
+    if not user.get("bwl_service_id"):
+        # Local mode: no BWL container, but still mark as paused
+        await db.set_status(user_id, "paused")
+        await db.add_log(user_id, "balance depleted — service paused (local mode)")
         return
 
     # Idempotent: skip if already paused
@@ -204,8 +209,13 @@ async def restore(user_id: str):
     2. POST new deployment
     """
     user = await db.get_user(user_id)
-    if not user or not user.get("bwl_service_id"):
-        await db.add_log(user_id, "restore skipped — no service ID found")
+    if not user:
+        return
+
+    if not user.get("bwl_service_id"):
+        # Local mode: no BWL container, just set back to active
+        await db.set_status(user_id, "active")
+        await db.add_log(user_id, "credits replenished — service restored (local mode)")
         return
 
     headers = await _bwl_headers()

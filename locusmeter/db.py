@@ -200,6 +200,20 @@ async def get_checkout_session(session_id: str) -> Optional[dict]:
     return dict(row) if row else None
 
 
+async def delete_user(user_id: str):
+    """Delete a user from the database."""
+    db = await get_db()
+    await db.execute("DELETE FROM users WHERE user_id = ?", (user_id,))
+    await db.commit()
+
+
+async def clear_logs():
+    """Clear all agent logs."""
+    db = await get_db()
+    await db.execute("DELETE FROM agent_logs")
+    await db.commit()
+
+
 async def close_db():
     """Close the database connection."""
     global _db

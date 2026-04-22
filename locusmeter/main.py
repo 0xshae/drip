@@ -332,6 +332,20 @@ async def demo_research():
     return {"ok": True, "user_id": user["user_id"]}
 
 
+@app.post("/demo/reset")
+async def demo_reset():
+    """Reset the demo — clear all users and logs for a fresh start."""
+    users = await db.get_all_users()
+    deleted = []
+    for user in users:
+        await db.delete_user(user["user_id"])
+        deleted.append(user["user_id"])
+
+    await db.clear_logs()
+    await db.add_log(None, "🔄 demo reset — all users and logs cleared")
+    return {"ok": True, "deleted_users": deleted}
+
+
 if __name__ == "__main__":
     import uvicorn
     port = int(os.getenv("PORT", "8080"))

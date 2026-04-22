@@ -40,6 +40,9 @@ async def check_master_wallet_balance() -> float:
     api_base = os.getenv("LOCUS_API_BASE", "https://beta-api.paywithlocus.com/api")
 
     try:
+        if not locus_api_key:
+            return -1.0  # Skip silently when no API key configured
+
         async with httpx.AsyncClient(timeout=15) as client:
             resp = await client.get(
                 f"{api_base}/pay/balance",
@@ -47,8 +50,10 @@ async def check_master_wallet_balance() -> float:
             )
             resp.raise_for_status()
             data = resp.json()
-            balance = float(data.get("data", {}).get("balance", "0"))
-            return balance
+            d = data.get("data", {})
+            usdc = float(d.get("usdc_balance", "0"))
+            promo = float(d.get("promo_credit_balance", "0"))
+            return usdc + promo
     except Exception as e:
         await db.add_log(None, f"WARNING: master wallet balance check failed: {e}")
         return -1.0
