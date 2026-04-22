@@ -152,28 +152,10 @@ async def handle_checkout_paid(request: Request) -> dict:
     user_id = payment_data.get("metadata", {}).get("user_id", session["user_id"])
     amount = float(payment_data.get("amount", session["amount"]))
 
-    # Credit the user's balance
-    await db.credit_balance(user_id, amount)
-    await db.add_log(user_id,
-                    f"💰 payment received — {amount:.2f} USDC credited to balance")
-
-    # Check if user was paused → trigger restore
-    user = await db.get_user(user_id)
-    if user and user.get("status") == "paused":
-        await db.add_log(user_id, "user was paused — triggering auto-restore")
-        try:
-            await restore(user_id)
-        except Exception as e:
-            await db.add_log(user_id, f"auto-restore failed: {str(e)[:100]}")
-
-    # Send confirmation via AgentMail
+    from locusmeter.main import client
     try:
-        from locusmeter.agent import send_agentmail_warning
-        if user:
-            # Refresh user data
-            user = await db.get_user(user_id)
-            await send_agentmail_warning(user, "restored")
+        await client.topup(user_id=user_id, amount=amount)
     except Exception as e:
-        await db.add_log(user_id, f"confirmation email failed: {str(e)[:50]}")
+        await db.add_log(user_id, f"top-up processing failed: {str(e)[:100]}")
 
     return {"ok": True}

@@ -27,6 +27,16 @@ from locusmeter.models import (
     CheckoutSessionCreate,
 )
 
+import sys
+sys.path.append(str(Path(__file__).parent.parent / "sdk"))
+from drip import DripClient, DripConfig
+
+client = DripClient(DripConfig(
+    locus_api_key=os.environ.get("LOCUS_API_KEY", ""),
+    bwl_api_key=os.environ.get("BWL_API_KEY", ""),
+    agentmail_inbox=os.environ.get("AGENTMAIL_INBOX", "ricc@agentmail.to"),
+))
+
 # Template directory
 TEMPLATE_DIR = Path(__file__).parent.parent / "templates"
 templates = Jinja2Templates(directory=str(TEMPLATE_DIR))
@@ -39,9 +49,8 @@ async def lifespan(app: FastAPI):
     await db.init_tables()
     await db.add_log(None, "Drip agent started — initializing systems")
 
-    # Import here to avoid circular imports
-    from locusmeter.agent import start_polling_loop
-    polling_task = asyncio.create_task(start_polling_loop())
+    # Start the SDK polling loop
+    polling_task = asyncio.create_task(client.start_polling())
 
     await db.add_log(None, "polling loop active — monitoring all user balances")
     yield
@@ -76,71 +85,38 @@ async def health():
 @app.post("/provision")
 async def provision_user(req: UserCreate):
     """Create a new user and spin up their BWL container."""
-    from locusmeter.lifecycle import provision
-
-    # Check if user already exists
-    existing = await db.get_user(req.user_id)
-    if existing:
-        raise HTTPException(400, f"User {req.user_id} already exists")
-
-    # Create user in SQLite
-    user = await db.create_user(
-        user_id=req.user_id,
-        email=req.email,
-        topic=req.topic,
-        initial_balance=req.initial_balance,
-        credit_rate=req.credit_rate,
-    )
-    await db.add_log(req.user_id,
-                     f"new user registered — topic: '{req.topic}', "
-                     f"balance: {req.initial_balance:.2f} USDC")
-
-    # Provision BWL container
     try:
-        result = await provision(req.user_id)
-        await db.add_log(req.user_id,
-                         f"container provisioned — service_id: {result.get('service_id', 'pending')}")
-        return {"ok": True, "user": user, "provision": result}
+        user = await client.provision_user(
+            user_id=req.user_id,
+            email=req.email,
+            initial_balance=req.initial_balance,
+            credit_rate=req.credit_rate,
+            container_image=os.getenv("GHCR_IMAGE", "ghcr.io/0xshae/locusmeter-research:latest"),
+            metadata={"topic": req.topic}
+        )
+        return {"ok": True, "user": user}
     except Exception as e:
-        # In local/demo mode, BWL might not be available — still set user active
-        await db.add_log(req.user_id,
-                         f"BWL provision failed (continuing in local mode): {str(e)[:100]}")
-        await db.set_status(req.user_id, "active")
-        return {"ok": True, "user": user, "provision": {"local_mode": True, "error": str(e)[:100]}}
+        raise HTTPException(400, f"Provisioning failed: {e}")
 
 
 @app.post("/teardown")
 async def teardown_user(user_id: str):
     """Scale user's container to zero."""
-    from locusmeter.lifecycle import teardown
-
-    user = await db.get_user(user_id)
-    if not user:
-        raise HTTPException(404, f"User {user_id} not found")
-
     try:
-        await teardown(user_id)
+        await client.hibernate(user_id)
         return {"ok": True, "status": "paused"}
     except Exception as e:
-        await db.add_log(user_id, f"teardown failed: {str(e)}")
-        raise HTTPException(500, f"Teardown failed: {str(e)}")
+        raise HTTPException(500, f"Teardown failed: {e}")
 
 
 @app.post("/restore")
 async def restore_user(user_id: str):
     """Scale user's container back up."""
-    from locusmeter.lifecycle import restore
-
-    user = await db.get_user(user_id)
-    if not user:
-        raise HTTPException(404, f"User {user_id} not found")
-
     try:
-        await restore(user_id)
+        await client.restore(user_id)
         return {"ok": True, "status": "restoring"}
     except Exception as e:
-        await db.add_log(user_id, f"restore failed: {str(e)}")
-        raise HTTPException(500, f"Restore failed: {str(e)}")
+        raise HTTPException(500, f"Restore failed: {e}")
 
 
 # ---------- Internal Debit (called by research container) ----------
@@ -148,18 +124,12 @@ async def restore_user(user_id: str):
 @app.post("/internal/debit")
 async def internal_debit(req: DebitRequest):
     """Research container calls this to drain credits after each cycle."""
-    from locusmeter.billing import deduct_credits
-
-    user = await db.get_user(req.user_id)
-    if not user:
-        raise HTTPException(404, f"User {req.user_id} not found")
-
-    if user["balance_usdc"] <= 0:
-        raise HTTPException(402, "Insufficient credits — container should pause")
-
-    await deduct_credits(req.user_id, req.amount, req.label)
-    updated = await db.get_user(req.user_id)
-    return {"ok": True, "remaining_balance": updated["balance_usdc"]}
+    try:
+        await client.debit(req.user_id, req.amount, req.label)
+        user = await client.get_user(req.user_id)
+        return {"ok": True, "remaining_balance": user["balance_usdc"]}
+    except Exception as e:
+        raise HTTPException(402, f"Insufficient credits: {e}")
 
 
 # ---------- Logs ----------
