@@ -107,8 +107,8 @@ async def synthesize_claude(topic: str, sources: List[dict],
     ])
 
     try:
-        result = await _locus_wrapped_call("anthropic", "messages", {
-            "model": "claude-3-5-haiku-20241022",
+        result = await _locus_wrapped_call("openai", "chat", {
+            "model": "gpt-4o-mini",
             "max_tokens": 1024 if mode == "detailed" else 512,
             "messages": [
                 {
@@ -120,16 +120,13 @@ async def synthesize_claude(topic: str, sources: List[dict],
         })
 
         data = result.get("data", result)
-        # Claude API returns content as a list of blocks
-        content_blocks = data.get("content", [])
-        if isinstance(content_blocks, list):
-            return "\n".join(
-                block.get("text", "") for block in content_blocks
-                if isinstance(block, dict)
-            )
-        return str(content_blocks)
+        choices = data.get("choices", [])
+        if choices and isinstance(choices, list):
+            msg = choices[0].get("message", {})
+            return msg.get("content", "")
+        return str(data)
     except Exception as e:
-        print(f"Claude synthesis error: {e}")
+        print(f"OpenAI synthesis error: {e}")
         return f"Synthesis failed: {str(e)}"
 
 
