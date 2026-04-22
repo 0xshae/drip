@@ -14,6 +14,8 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from dotenv import load_dotenv
+load_dotenv()
+
 from fastapi import FastAPI, Request, HTTPException, Form
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -24,8 +26,6 @@ from locusmeter.models import (
     UserCreate, UserResponse, DebitRequest,
     CheckoutSessionCreate,
 )
-
-load_dotenv()
 
 # Template directory
 TEMPLATE_DIR = Path(__file__).parent.parent / "templates"
