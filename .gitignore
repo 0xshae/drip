@@ -16,11 +16,11 @@ main-reviews.jsonl
 
 resources-shown.jsonl
 
-shagunprasad-main-eng-plan-20260420-213103.md
-
-shagunprasad-unknown-design-20260420-162229.md
-
-timeline.jsonl
+*eng-plan*.md
+*eng-review-test-plan*.md
+*unknown-design*.md
+*landing-page-prompt*.md
+*landing-page-design-prompt*.md
 
 # Environment variables
 .env
