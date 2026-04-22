@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "drip-sdk"
+version = "0.1.0"
+description = "Pay-as-you-go compute middleware for BuildWithLocus apps"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "httpx>=0.27",
+    "asyncpg>=0.29",
+    "python-dotenv>=1.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/0xshae/drip"
+Documentation = "https://drip-landing-sooty.vercel.app"
