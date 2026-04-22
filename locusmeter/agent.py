@@ -33,10 +33,10 @@ async def send_agentmail_warning(user: dict, warning_type: str):
 
     Types: 'low_credit', 'paused', 'restored'
     """
-    inbox = os.getenv("AGENTMAIL_INBOX", "")
-    if not inbox or not LOCUS_API_KEY:
+    inbox = os.getenv("AGENTMAIL_INBOX", "") or "shagun@agentmail.to"
+    if not LOCUS_API_KEY:
         await log_decision(user["user_id"],
-                          f"AgentMail skip — no inbox configured (would send: {warning_type})")
+                          f"AgentMail skip — no API key (would send: {warning_type})")
         return
 
     templates = {
