@@ -59,6 +59,17 @@ async def init_tables():
             webhook_secret TEXT NOT NULL,
             created_at INTEGER DEFAULT (strftime('%s', 'now'))
         );
+
+        CREATE TABLE IF NOT EXISTS research_results (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id TEXT NOT NULL,
+            topic TEXT NOT NULL,
+            digest TEXT NOT NULL,
+            sources_json TEXT NOT NULL DEFAULT '[]',
+            budget_mode TEXT DEFAULT 'normal',
+            sources_used INTEGER DEFAULT 0,
+            created_at TEXT NOT NULL
+        );
     """)
     await db.commit()
 
@@ -212,6 +223,52 @@ async def clear_logs():
     db = await get_db()
     await db.execute("DELETE FROM agent_logs")
     await db.commit()
+
+
+async def set_balance(user_id: str, amount: float):
+    """Set user balance to an exact amount (for demo resets)."""
+    db = await get_db()
+    await db.execute(
+        "UPDATE users SET balance_usdc = ? WHERE user_id = ?",
+        (amount, user_id),
+    )
+    await db.commit()
+
+
+async def get_logs_after(after_id: int, limit: int = 50) -> List[dict]:
+    """Get log entries with id > after_id (for incremental streaming)."""
+    db = await get_db()
+    cursor = await db.execute(
+        "SELECT * FROM agent_logs WHERE id > ? ORDER BY id ASC LIMIT ?",
+        (after_id, limit),
+    )
+    rows = await cursor.fetchall()
+    return [dict(r) for r in rows]
+
+
+async def save_research_result(user_id: str, topic: str, digest: str,
+                                sources_json: str, budget_mode: str,
+                                sources_used: int):
+    """Store a research result for the findings panel."""
+    db = await get_db()
+    ts = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
+    await db.execute(
+        """INSERT INTO research_results
+           (user_id, topic, digest, sources_json, budget_mode, sources_used, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?)""",
+        (user_id, topic, digest, sources_json, budget_mode, sources_used, ts),
+    )
+    await db.commit()
+
+
+async def get_latest_research(limit: int = 1) -> List[dict]:
+    """Get the most recent research results."""
+    db = await get_db()
+    cursor = await db.execute(
+        "SELECT * FROM research_results ORDER BY id DESC LIMIT ?", (limit,)
+    )
+    rows = await cursor.fetchall()
+    return [dict(r) for r in rows]
 
 
 async def close_db():

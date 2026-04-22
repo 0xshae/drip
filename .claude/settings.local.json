@@ -2,7 +2,23 @@
   "permissions": {
     "allow": [
       "WebFetch(domain:beta.paywithlocus.com)",
-      "Bash(~/.claude/skills/gstack/bin/gstack-review-read *)"
+      "Bash(~/.claude/skills/gstack/bin/gstack-review-read *)",
+      "Bash(npm create *)",
+      "Bash(npx astro *)",
+      "Bash(npm run *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:4321)",
+      "Bash(open *)",
+      "Bash(npm install *)",
+      "Bash(npm uninstall *)",
+      "Bash(npx tailwindcss *)",
+      "Bash(rm -f postcss.config.mjs)",
+      "Bash(rm -f postcss.config.js)",
+      "Bash(mv tailwind.config.js tailwind.config.mjs)",
+      "Bash(ls -la *.config*)",
+      "Bash(curl -s http://localhost:4321)",
+      "Bash(pkill -f \"astro dev\")",
+      "Bash(mv postcss.config.js postcss.config.cjs)",
+      "Bash(mv tailwind.config.js tailwind.config.cjs)"
     ]
   }
 }

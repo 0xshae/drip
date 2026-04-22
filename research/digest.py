@@ -210,6 +210,10 @@ async def run_research_cycle(topic: str, balance: float, initial_balance: float,
     return {
         "digest": digest,
         "sources_used": sources_used,
+        "sources": [
+            {"title": s.get("title", ""), "url": s.get("url", "")}
+            for s in search_results
+        ],
         "cost_estimate": cost_estimate,
         "budget_mode": config["budget_mode"],
         "log_message": config["log_message"],

@@ -8,78 +8,86 @@
         <span>📊</span> Agent Dashboard
     </div>
 
-    <!-- Stats Row -->
+    <!-- Stats Row (updated live by JS) -->
     <div class="grid-3" style="margin-bottom: 24px;">
         <div class="card">
             <div class="card-title">Active Users</div>
-            <div class="stat-value">{{ users|selectattr('status', 'in', ['active', 'low_credit'])|list|length }}</div>
+            <div class="stat-value" id="stat-active">{{ users|selectattr('status', 'in', ['active', 'low_credit'])|list|length }}</div>
             <div class="stat-label">containers running</div>
         </div>
         <div class="card">
             <div class="card-title">Paused</div>
-            <div class="stat-value" style="color: var(--warning);">{{ users|selectattr('status', 'equalto', 'paused')|list|length }}</div>
+            <div class="stat-value" id="stat-paused" style="color: var(--warning);">{{ users|selectattr('status', 'equalto', 'paused')|list|length }}</div>
             <div class="stat-label">awaiting recharge</div>
         </div>
         <div class="card">
             <div class="card-title">Total Users</div>
-            <div class="stat-value">{{ users|length }}</div>
+            <div class="stat-value" id="stat-total">{{ users|length }}</div>
             <div class="stat-label">all time</div>
         </div>
     </div>
 
-    <!-- Two-column layout -->
-    <div class="grid-2">
+    <!-- Three-column layout: Users | Agent Log | Research Findings -->
+    <div class="grid-3-layout">
         <!-- Users Panel -->
         <div>
             <div class="card" style="margin-bottom: 20px;">
                 <div class="card-title">👥 Users</div>
+                <div id="users-panel">
                 {% if users %}
                     {% for user in users %}
-                    <div class="user-row">
-                        <div>
-                            <div style="font-weight: 500;">{{ user.user_id }}</div>
-                            <div style="font-size: 12px; color: var(--text-muted);">{{ user.topic }}</div>
-                        </div>
-                        <div>
-                            {% set pct = (user.balance_usdc / user.initial_balance * 100) if user.initial_balance > 0 else 0 %}
-                            <div class="meter-container">
-                                <div class="meter-bar">
-                                    <div class="meter-fill {% if pct > 30 %}healthy{% elif pct > 10 %}warning{% else %}critical{% endif %}"
-                                         style="width: {{ pct }}%"></div>
-                                </div>
+                    {% set pct = (user.balance_usdc / user.initial_balance * 100) if user.initial_balance > 0 else 0 %}
+                    <div class="user-card" data-user-id="{{ user.user_id }}">
+                        <div class="user-header">
+                            <div>
+                                <div style="font-weight: 600; font-size: 14px;">{{ user.user_id }}</div>
+                                <div style="font-size: 11px; color: var(--text-muted);">{{ user.topic }}</div>
+                            </div>
+                            <div class="user-status-badge" data-status="{{ user.status }}">
+                                {% if user.status == 'active' %}
+                                    <span class="badge badge-active">● Active</span>
+                                {% elif user.status == 'low_credit' %}
+                                    <span class="badge badge-warning">⚠ Low</span>
+                                {% elif user.status == 'paused' %}
+                                    <span class="badge badge-paused">⏸ Paused</span>
+                                {% elif user.status == 'restoring' %}
+                                    <span class="badge badge-restoring">🔄 Restoring</span>
+                                {% else %}
+                                    <span class="badge badge-provisioning">⏳ {{ user.status }}</span>
+                                {% endif %}
                             </div>
                         </div>
-                        <div class="user-balance {% if pct > 30 %}healthy{% elif pct > 10 %}warning{% else %}critical{% endif %}">
-                            ${{ "%.2f"|format(user.balance_usdc) }}
-                        </div>
-                        <div>
-                            {% if user.status == 'active' %}
-                                <span class="badge badge-active">● Active</span>
-                            {% elif user.status == 'low_credit' %}
-                                <span class="badge badge-warning">⚠ Low</span>
-                            {% elif user.status == 'paused' %}
-                                <span class="badge badge-paused">⏸ Paused</span>
-                            {% elif user.status == 'restoring' %}
-                                <span class="badge badge-restoring">🔄 Restoring</span>
-                            {% else %}
-                                <span class="badge badge-provisioning">⏳ {{ user.status }}</span>
-                            {% endif %}
-                        </div>
-                        <div style="text-align: right;">
-                            {% if user.status == 'active' or user.status == 'low_credit' %}
-                                <button class="btn btn-danger" style="font-size: 11px; padding: 4px 10px;"
-                                        hx-post="/teardown?user_id={{ user.user_id }}"
-                                        hx-swap="none"
-                                        hx-confirm="Force teardown {{ user.user_id }}?">
-                                    Teardown
-                                </button>
-                            {% elif user.status == 'paused' %}
-                                <button class="btn btn-success" style="font-size: 11px; padding: 4px 10px;"
-                                        hx-post="/restore?user_id={{ user.user_id }}"
-                                        hx-swap="none">
-                                    Restore
-                                </button>
-                            {% endif %}
+                        <div class="user-body">
+                            <!-- Battery Bar -->
+                            <div class="battery-wrapper">
+                                <div class="battery" data-pct="{{ pct|int }}">
+                                    <div class="battery-cap"></div>
+                                    <div class="battery-body">
+                                        <div class="battery-fill {% if pct > 50 %}healthy{% elif pct > 20 %}caution{% elif pct > 10 %}low{% elif pct > 0 %}critical{% else %}dead{% endif %}"
+                                             style="height: {{ pct }}%"></div>
+                                    </div>
+                                </div>
+                                <div class="battery-label" data-balance="{{ '%.2f'|format(user.balance_usdc) }}">
+                                    ${{ "%.2f"|format(user.balance_usdc) }}
+                                </div>
+                            </div>
+                            <!-- Actions -->
+                            <div class="user-actions">
+                                {% if user.status == 'active' or user.status == 'low_credit' %}
+                                    <button class="btn btn-danger btn-sm"
+                                            hx-post="/teardown?user_id={{ user.user_id }}"
+                                            hx-swap="none"
+                                            hx-confirm="Force teardown {{ user.user_id }}?">
+                                        ⏸ Teardown
+                                    </button>
+                                {% elif user.status == 'paused' %}
+                                    <button class="btn btn-success btn-sm"
+                                            hx-post="/restore?user_id={{ user.user_id }}"
+                                            hx-swap="none">
+                                        ▶ Restore
+                                    </button>
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
                     {% endfor %}
@@ -89,6 +97,7 @@
                         <p>No users yet. Provision one below!</p>
                     </div>
                 {% endif %}
+                </div>
             </div>
 
             <!-- Provision Form -->
@@ -102,7 +111,7 @@
                         </div>
                         <div class="form-group">
                             <label class="form-label">Email</label>
-                            <input class="form-input" id="prov-email" type="email" placeholder="alice@example.com" required>
+                            <input class="form-input" id="prov-email" type="email" placeholder="shae@agentmail.to" required>
                         </div>
                     </div>
                     <div class="form-group">
@@ -132,18 +141,12 @@
             <div class="card" style="position: sticky; top: 80px;">
                 <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
                     <span>🧠 Agent Reasoning Log</span>
-                    <span class="htmx-indicator" style="font-size: 12px; color: var(--accent-primary);">
-                        updating...
-                    </span>
+                    <span id="log-pulse" class="log-live-dot">● LIVE</span>
                 </div>
-                <div id="agent-logs"
-                     class="log-container"
-                     hx-get="/logs"
-                     hx-trigger="every 2s"
-                     hx-swap="innerHTML">
+                <div id="agent-logs" class="log-container">
                     {% for log in logs %}
-                    <div class="log-entry {% if '⚠️' in log.message or 'WARNING' in log.message %}warning{% elif 'error' in log.message|lower or 'failed' in log.message|lower %}error{% elif '💰' in log.message or 'provisioned' in log.message %}success{% else %}system{% endif %} fade-in">
-                        <span class="log-ts">{{ log.ts }}</span>
+                    <div class="log-entry {% if '⚠️' in log.message or 'WARNING' in log.message or 'LOW CREDIT' in log.message %}warning{% elif 'error' in log.message|lower or 'failed' in log.message|lower or '💀' in log.message %}error{% elif '💰' in log.message or 'provisioned' in log.message or '📊' in log.message %}success{% elif '🔬' in log.message %}research{% else %}system{% endif %}" data-log-id="{{ log.id }}">
+                        <span class="log-ts">{{ log.ts[-8:] }}</span>
                         <span class="log-user">{{ log.user_id or 'system' }}</span>
                         <span class="log-msg">{{ log.message }}</span>
                     </div>
@@ -153,6 +156,19 @@
                         <p>Agent starting up... logs will appear here.</p>
                     </div>
                     {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Research Findings Panel -->
+        <div>
+            <div class="card" id="research-panel" style="position: sticky; top: 80px;">
+                <div class="card-title">🔬 Research Findings</div>
+                <div id="research-content">
+                    <div class="empty-state" style="padding: 24px;">
+                        <div class="empty-state-icon" style="font-size: 32px;">🧪</div>
+                        <p style="font-size: 12px;">Click "Trigger Research" to see live findings here</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -193,7 +209,182 @@
 </section>
 
 <script>
-    // Provision form — submit as JSON
+    // ========== Fix 1: Smooth append-only log streaming ==========
+    let lastLogId = 0;
+
+    // Initialize lastLogId from existing entries
+    document.querySelectorAll('#agent-logs .log-entry').forEach(el => {
+        const id = parseInt(el.dataset.logId || '0');
+        if (id > lastLogId) lastLogId = id;
+    });
+
+    function getLogClass(msg) {
+        if (msg.includes('⚠️') || msg.includes('WARNING') || msg.includes('LOW CREDIT')) return 'warning';
+        if (msg.toLowerCase().includes('error') || msg.toLowerCase().includes('failed') || msg.includes('💀')) return 'error';
+        if (msg.includes('💰') || msg.includes('provisioned') || msg.includes('📊')) return 'success';
+        if (msg.includes('🔬')) return 'research';
+        return 'system';
+    }
+
+    async function pollLogs() {
+        try {
+            const resp = await fetch(`/logs?after_id=${lastLogId}`);
+            if (!resp.ok) return;
+            const newLogs = await resp.json();
+            if (!Array.isArray(newLogs) || newLogs.length === 0) return;
+
+            const container = document.getElementById('agent-logs');
+            // Remove empty state if present
+            const emptyState = container.querySelector('.empty-state');
+            if (emptyState) emptyState.remove();
+
+            for (const log of newLogs) {
+                if (log.id <= lastLogId) continue;
+                lastLogId = log.id;
+
+                const div = document.createElement('div');
+                div.className = `log-entry ${getLogClass(log.message)} slide-in`;
+                div.dataset.logId = log.id;
+                div.innerHTML = `
+                    <span class="log-ts">${(log.ts || '').slice(-8)}</span>
+                    <span class="log-user">${log.user_id || 'system'}</span>
+                    <span class="log-msg">${log.message}</span>
+                `;
+                container.appendChild(div);
+            }
+
+            // Auto-scroll
+            container.scrollTop = container.scrollHeight;
+
+            // Pulse the LIVE indicator
+            const pulse = document.getElementById('log-pulse');
+            if (pulse) {
+                pulse.classList.add('flash');
+                setTimeout(() => pulse.classList.remove('flash'), 400);
+            }
+        } catch(e) { /* ignore fetch errors */ }
+    }
+
+    // ========== Live state poller (users, stats, battery) ==========
+    async function pollState() {
+        try {
+            const resp = await fetch('/state');
+            if (!resp.ok) return;
+            const data = await resp.json();
+
+            // Update stats
+            const statActive = document.getElementById('stat-active');
+            const statPaused = document.getElementById('stat-paused');
+            const statTotal = document.getElementById('stat-total');
+            if (statActive) statActive.textContent = data.stats.active;
+            if (statPaused) statPaused.textContent = data.stats.paused;
+            if (statTotal) statTotal.textContent = data.stats.total;
+
+            // Update each user card
+            for (const user of data.users) {
+                const card = document.querySelector(`.user-card[data-user-id="${user.user_id}"]`);
+                if (!card) continue;
+
+                const pct = user.initial_balance > 0
+                    ? (user.balance_usdc / user.initial_balance * 100) : 0;
+
+                // Update battery fill
+                const fill = card.querySelector('.battery-fill');
+                if (fill) {
+                    fill.style.height = `${Math.max(0, Math.min(100, pct))}%`;
+                    fill.className = 'battery-fill ' + (
+                        pct > 50 ? 'healthy' :
+                        pct > 20 ? 'caution' :
+                        pct > 10 ? 'low' :
+                        pct > 0 ? 'critical' : 'dead'
+                    );
+                    // Add draining animation when actively depleting
+                    const battery = card.querySelector('.battery');
+                    if (battery) {
+                        if (pct < 20 && pct > 0) {
+                            battery.classList.add('draining');
+                        } else {
+                            battery.classList.remove('draining');
+                        }
+                    }
+                }
+
+                // Update balance label
+                const label = card.querySelector('.battery-label');
+                if (label) {
+                    label.textContent = `$${user.balance_usdc.toFixed(2)}`;
+                    label.dataset.balance = user.balance_usdc.toFixed(2);
+                }
+
+                // Update status badge
+                const badgeContainer = card.querySelector('.user-status-badge');
+                if (badgeContainer) {
+                    const oldStatus = badgeContainer.dataset.status;
+                    if (oldStatus !== user.status) {
+                        badgeContainer.dataset.status = user.status;
+                        const badgeMap = {
+                            active:      '<span class="badge badge-active">● Active</span>',
+                            low_credit:  '<span class="badge badge-warning">⚠ Low</span>',
+                            paused:      '<span class="badge badge-paused">⏸ Paused</span>',
+                            restoring:   '<span class="badge badge-restoring">🔄 Restoring</span>',
+                        };
+                        badgeContainer.innerHTML = badgeMap[user.status] ||
+                            `<span class="badge badge-provisioning">⏳ ${user.status}</span>`;
+                        // Flash animation on status change
+                        badgeContainer.classList.add('status-changed');
+                        setTimeout(() => badgeContainer.classList.remove('status-changed'), 600);
+                    }
+                }
+            }
+        } catch(e) { /* ignore */ }
+    }
+
+    // ========== Research findings poller ==========
+    let lastResearchId = 0;
+
+    async function pollResearch() {
+        try {
+            const resp = await fetch('/research/latest');
+            if (!resp.ok) return;
+            const data = await resp.json();
+            if (!data.result) return;
+
+            const r = data.result;
+            // Check if this is new
+            const key = `${r.user_id}-${r.created_at}`;
+            if (key === lastResearchId) return;
+            lastResearchId = key;
+
+            const container = document.getElementById('research-content');
+            const sourcesHtml = (r.sources || []).map(s =>
+                `<div class="research-source">
+                    <a href="${s.url}" target="_blank" rel="noopener">${s.title || s.url}</a>
+                </div>`
+            ).join('');
+
+            container.innerHTML = `
+                <div class="research-result slide-in">
+                    <div class="research-meta">
+                        <span class="badge badge-${r.budget_mode === 'budget' ? 'warning' : 'active'}"
+                              style="font-size: 10px;">${r.budget_mode} mode</span>
+                        <span style="font-size: 11px; color: var(--text-muted);">${r.sources_used} sources · ${r.created_at.slice(-8)}</span>
+                    </div>
+                    <div class="research-topic">${r.topic}</div>
+                    <div class="research-digest">${r.digest.replace(/\n/g, '<br>')}</div>
+                    ${sourcesHtml ? `<div class="research-sources-title">Sources:</div>${sourcesHtml}` : ''}
+                </div>
+            `;
+
+            // Flash the panel
+            const panel = document.getElementById('research-panel');
+            if (panel) {
+                panel.classList.add('research-new');
+                setTimeout(() => panel.classList.remove('research-new'), 1500);
+            }
+        } catch(e) { /* ignore */ }
+    }
+
+    // ========== Provision form ==========
     document.getElementById('provision-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         const btn = document.getElementById('provision-btn');
@@ -231,37 +422,14 @@
         }
     });
 
-    // Auto-scroll log container to bottom on new entries
-    const logContainer = document.getElementById('agent-logs');
-    if (logContainer) {
-        const observer = new MutationObserver(() => {
-            logContainer.scrollTop = logContainer.scrollHeight;
-        });
-        observer.observe(logContainer, { childList: true, subtree: true });
-    }
+    // ========== Start all pollers ==========
+    setInterval(pollLogs, 2000);
+    setInterval(pollState, 2000);
+    setInterval(pollResearch, 5000);
 
-    // Render log entries from JSON response
-    document.body.addEventListener('htmx:afterSwap', function(evt) {
-        if (evt.detail.target.id === 'agent-logs') {
-            const logs = evt.detail.target;
-            try {
-                const data = JSON.parse(logs.textContent);
-                if (Array.isArray(data)) {
-                    logs.innerHTML = data.map(log => {
-                        let cls = 'system';
-                        if (log.message.includes('⚠️') || log.message.includes('WARNING')) cls = 'warning';
-                        else if (log.message.toLowerCase().includes('error') || log.message.toLowerCase().includes('failed')) cls = 'error';
-                        else if (log.message.includes('💰') || log.message.includes('provisioned')) cls = 'success';
-
-                        return `<div class="log-entry ${cls} fade-in">
-                            <span class="log-ts">${log.ts}</span>
-                            <span class="log-user">${log.user_id || 'system'}</span>
-                            <span class="log-msg">${log.message}</span>
-                        </div>`;
-                    }).join('');
-                }
-            } catch(e) { /* Not JSON, leave as-is */ }
-        }
-    });
+    // Initial polls
+    setTimeout(pollLogs, 500);
+    setTimeout(pollState, 500);
+    setTimeout(pollResearch, 1000);
 </script>
 {% endblock %}

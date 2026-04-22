@@ -165,10 +165,31 @@ async def internal_debit(req: DebitRequest):
 # ---------- Logs ----------
 
 @app.get("/logs")
-async def get_logs():
-    """Last 50 agent log entries (HTMX polls every 2s)."""
-    logs = await db.get_logs(50)
+async def get_logs(after_id: int = 0):
+    """Agent log entries. If after_id is set, return only new entries (for smooth streaming)."""
+    if after_id > 0:
+        logs = await db.get_logs_after(after_id, limit=50)
+    else:
+        logs = await db.get_logs(50)
     return logs
+
+
+# ---------- Live State (for JS poller) ----------
+
+@app.get("/state")
+async def get_state():
+    """Live state for dashboard JS poller — users + stats, no page reload."""
+    users = await db.get_all_users()
+    active = len([u for u in users if u["status"] in ("active", "low_credit")])
+    paused = len([u for u in users if u["status"] == "paused"])
+    return {
+        "users": users,
+        "stats": {
+            "active": active,
+            "paused": paused,
+            "total": len(users),
+        }
+    }
 
 
 # ---------- Dashboard (HTMX UI) ----------
@@ -230,6 +251,34 @@ async def recharge_page(request: Request):
     return templates.TemplateResponse("recharge.html", {"request": request})
 
 
+# ---------- Research Results ----------
+
+@app.get("/research/latest")
+async def research_latest():
+    """Get the most recent research result for the findings panel."""
+    results = await db.get_latest_research(limit=1)
+    if not results:
+        return {"result": None}
+    r = results[0]
+    # Parse sources_json back to list
+    import json as _json
+    try:
+        sources = _json.loads(r.get("sources_json", "[]"))
+    except Exception:
+        sources = []
+    return {
+        "result": {
+            "user_id": r["user_id"],
+            "topic": r["topic"],
+            "digest": r["digest"],
+            "sources": sources,
+            "budget_mode": r["budget_mode"],
+            "sources_used": r["sources_used"],
+            "created_at": r["created_at"],
+        }
+    }
+
+
 # ---------- Demo Controls ----------
 
 _demo_tasks = {}
@@ -240,28 +289,55 @@ async def demo_drain():
 
     Simulates rapid credit depletion on all active users to
     demonstrate the full lifecycle (active → warning → teardown)
-    within ~2 minutes.
+    within ~2 minutes. Triggers low-credit warnings and teardown inline.
     """
     from locusmeter.billing import deduct_credits
+    from locusmeter.lifecycle import teardown
+    from locusmeter.agent import send_agentmail_warning
 
     users = await db.get_active_users()
     if not users:
         raise HTTPException(400, "No active users to drain")
 
-    async def drain_loop(user_id: str, credit_rate: float):
-        """Drain credits from a user at compressed rate."""
+    async def drain_loop(user_id: str, credit_rate: float, initial_balance: float):
+        """Drain credits from a user at compressed rate with lifecycle events."""
         demo_rate = credit_rate * 4  # 4x speed for demo
+        warned = False
         await db.add_log(user_id, f"🎮 demo drain started — {demo_rate:.4f} USDC every 5s")
         while True:
             user = await db.get_user(user_id)
-            if not user or user["balance_usdc"] <= 0 or user["status"] == "paused":
+            if not user or user["status"] == "paused":
                 await db.add_log(user_id, "🎮 demo drain complete")
                 break
+
+            balance = user["balance_usdc"]
+            if balance <= 0:
+                # Trigger teardown
+                await db.add_log(user_id,
+                    "💀 credits exhausted — triggering container teardown")
+                await teardown(user_id)
+                await send_agentmail_warning(user, "paused")
+                await db.add_log(user_id, "🎮 demo drain complete")
+                break
+
+            pct = balance / initial_balance if initial_balance > 0 else 0
+
+            # Low credit warning at 20% (Fix 4)
+            if pct < 0.2 and not warned and user["status"] == "active":
+                warned = True
+                await db.set_status(user_id, "low_credit")
+                await db.add_log(user_id,
+                    f"⚠️ LOW CREDIT WARNING — {balance:.4f} USDC "
+                    f"({pct*100:.0f}% remaining) — switching to budget mode")
+                await send_agentmail_warning(user, "low_credit")
+
             await deduct_credits(user_id, demo_rate, "demo_drain")
             await asyncio.sleep(5)
 
     for user in users:
-        task = asyncio.create_task(drain_loop(user["user_id"], user["credit_rate"]))
+        task = asyncio.create_task(
+            drain_loop(user["user_id"], user["credit_rate"], user["initial_balance"])
+        )
         _demo_tasks[user["user_id"]] = task
 
     await db.add_log(None, f"🎮 demo drain started for {len(users)} user(s)")
@@ -270,26 +346,29 @@ async def demo_drain():
 
 @app.post("/demo/topup")
 async def demo_topup():
-    """Simulate a top-up for all paused users."""
+    """Simulate a top-up: reset balance and restore status immediately."""
+    from locusmeter.lifecycle import restore
+
     users = await db.get_all_users()
     topped_up = []
 
     for user in users:
-        if user["status"] == "paused":
-            amount = user.get("initial_balance", 1.0)
-            await db.credit_balance(user["user_id"], amount)
-            await db.add_log(user["user_id"],
-                            f"🎮 demo top-up — {amount:.2f} USDC added")
-            topped_up.append(user["user_id"])
+        user_id = user["user_id"]
+        amount = user.get("initial_balance", 1.0)
 
-    if not topped_up:
-        # Top up all users regardless of status
-        for user in users:
-            amount = user.get("initial_balance", 1.0)
-            await db.credit_balance(user["user_id"], amount)
-            await db.add_log(user["user_id"],
-                            f"🎮 demo top-up — {amount:.2f} USDC added")
-            topped_up.append(user["user_id"])
+        # Fix 7: Use set_balance for absolute reset
+        await db.set_balance(user_id, amount)
+
+        # Fix 6: Immediately set status to active (don't wait for poller)
+        if user["status"] in ("paused", "low_credit", "restoring"):
+            await db.set_status(user_id, "active")
+            await db.add_log(user_id,
+                f"💰 demo top-up — balance reset to {amount:.2f} USDC — service restored")
+        else:
+            await db.add_log(user_id,
+                f"💰 demo top-up — balance reset to {amount:.2f} USDC")
+
+        topped_up.append(user_id)
 
     return {"ok": True, "topped_up": topped_up}
 
@@ -315,15 +394,32 @@ async def demo_research():
                 initial_balance=user["initial_balance"],
                 user_email=user.get("email", ""),
             )
+
+            sources_used = result.get("sources_used", 0)
+            budget_mode = result.get("budget_mode", "normal")
+            digest = result.get("digest", "")
+
             await db.add_log(user["user_id"],
-                            f"research complete — {result.get('sources_used', 0)} sources, "
-                            f"{result.get('budget_mode', 'normal')} mode")
+                            f"📊 research complete — {sources_used} sources, "
+                            f"{budget_mode} mode")
+
+            # Fix 3: Store research result for findings panel
+            import json as _json
+            sources_data = result.get("sources", [])
+            await db.save_research_result(
+                user_id=user["user_id"],
+                topic=user["topic"],
+                digest=digest,
+                sources_json=_json.dumps(sources_data) if sources_data else "[]",
+                budget_mode=budget_mode,
+                sources_used=sources_used,
+            )
 
             # Deduct cost
             from locusmeter.billing import deduct_credits
             cost = result.get("cost_estimate", 0.05)
             await deduct_credits(user["user_id"], cost,
-                               f"research_cycle ({result.get('sources_used', 0)} sources)")
+                               f"research_cycle ({sources_used} sources)")
         except Exception as e:
             await db.add_log(user["user_id"],
                             f"research failed: {str(e)[:100]}")

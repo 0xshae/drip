@@ -423,6 +423,193 @@
             font-size: 48px;
             margin-bottom: 16px;
         }
+
+        /* 3-column dashboard layout */
+        .grid-3-layout {
+            display: grid;
+            grid-template-columns: 1fr 1.2fr 0.8fr;
+            gap: 20px;
+        }
+        @media (max-width: 1100px) {
+            .grid-3-layout { grid-template-columns: 1fr 1fr; }
+        }
+        @media (max-width: 768px) {
+            .grid-3-layout { grid-template-columns: 1fr; }
+        }
+
+        /* User card */
+        .user-card {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border);
+            transition: var(--transition);
+        }
+        .user-card:last-child { border-bottom: none; }
+        .user-card:hover { background: var(--bg-card-hover); }
+        .user-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 10px;
+        }
+        .user-body {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .user-actions { margin-left: auto; }
+        .btn-sm { font-size: 11px; padding: 4px 10px; }
+
+        /* Battery bar */
+        .battery-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .battery {
+            width: 22px;
+            height: 40px;
+            position: relative;
+            transition: var(--transition);
+        }
+        .battery-cap {
+            width: 10px;
+            height: 4px;
+            background: var(--border);
+            border-radius: 2px 2px 0 0;
+            margin: 0 auto 1px;
+        }
+        .battery-body {
+            width: 100%;
+            height: calc(100% - 5px);
+            border: 2px solid var(--border);
+            border-radius: 3px;
+            position: relative;
+            overflow: hidden;
+            background: var(--bg-secondary);
+        }
+        .battery-fill {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            border-radius: 0 0 1px 1px;
+            transition: height 1s ease, background 0.5s ease;
+        }
+        .battery-fill.healthy { background: #22c55e; }
+        .battery-fill.caution { background: #eab308; }
+        .battery-fill.low { background: #f97316; }
+        .battery-fill.critical { background: #ef4444; }
+        .battery-fill.dead { background: #4a4a5a; height: 0 !important; }
+
+        /* Draining animation */
+        .battery.draining .battery-body {
+            box-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
+            animation: batteryPulse 1.5s ease-in-out infinite;
+        }
+        @keyframes batteryPulse {
+            0%, 100% { box-shadow: 0 0 4px rgba(239, 68, 68, 0.3); }
+            50% { box-shadow: 0 0 12px rgba(239, 68, 68, 0.6); }
+        }
+
+        .battery-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-primary);
+            min-width: 50px;
+            transition: color 0.3s ease;
+        }
+
+        /* Slide-in animation for new log entries */
+        .slide-in {
+            animation: slideIn 0.4s ease-out;
+        }
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        /* Live dot */
+        .log-live-dot {
+            font-size: 11px;
+            color: var(--success);
+            font-weight: 500;
+            transition: opacity 0.2s;
+        }
+        .log-live-dot.flash {
+            color: #fff;
+        }
+
+        /* Status change flash */
+        .status-changed {
+            animation: statusFlash 0.6s ease;
+        }
+        @keyframes statusFlash {
+            0% { transform: scale(1); }
+            30% { transform: scale(1.15); }
+            100% { transform: scale(1); }
+        }
+
+        /* Research panel */
+        .research-result {
+            font-size: 13px;
+        }
+        .research-meta {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .research-topic {
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 8px;
+            color: var(--accent-secondary);
+        }
+        .research-digest {
+            font-size: 12px;
+            line-height: 1.6;
+            color: var(--text-secondary);
+            max-height: 300px;
+            overflow-y: auto;
+            padding-right: 8px;
+        }
+        .research-sources-title {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-top: 12px;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .research-source {
+            font-size: 11px;
+            padding: 4px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        .research-source:last-child { border-bottom: none; }
+        .research-source a {
+            color: var(--accent-primary);
+            text-decoration: none;
+        }
+        .research-source a:hover {
+            text-decoration: underline;
+        }
+        #research-panel.research-new {
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.2);
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+
+        /* Log entry research type */
+        .log-entry.research { border-left-color: var(--accent-secondary); }
     </style>
 </head>
 <body>
