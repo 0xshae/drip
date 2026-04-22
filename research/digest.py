@@ -11,6 +11,7 @@ import httpx
 from typing import List, Optional
 
 from research.budget import get_crawl_config
+from locusmeter.main import client
 
 LOCUS_API_KEY = os.getenv("LOCUS_API_KEY", "")
 LOCUS_API_BASE = os.getenv("LOCUS_API_BASE", "https://beta-api.paywithlocus.com/api")
@@ -37,7 +38,8 @@ async def _locus_wrapped_call(provider: str, endpoint: str, payload: dict) -> di
         return resp.json()
 
 
-async def search_exa(topic: str, max_results: int = 5) -> List[dict]:
+@client.meter(cost=0.007, event="exa_search", user_id_param="user_id")
+async def search_exa(topic: str, user_id: str, max_results: int = 5) -> List[dict]:
     """Search for recent content on a topic using Exa via Locus Wrapped API."""
     try:
         result = await _locus_wrapped_call("exa", "search", {
@@ -63,7 +65,8 @@ async def search_exa(topic: str, max_results: int = 5) -> List[dict]:
         return []
 
 
-async def scrape_firecrawl(url: str) -> str:
+@client.meter(cost=0.003, event="firecrawl_scrape", user_id_param="user_id")
+async def scrape_firecrawl(url: str, user_id: str) -> str:
     """Scrape a single page using Firecrawl via Locus Wrapped API."""
     try:
         result = await _locus_wrapped_call("firecrawl", "scrape", {
@@ -81,7 +84,8 @@ async def scrape_firecrawl(url: str) -> str:
         return ""
 
 
-async def synthesize_claude(topic: str, sources: List[dict],
+@client.meter(cost=0.01, event="claude_synthesize", user_id_param="user_id")
+async def synthesize_claude(topic: str, sources: List[dict], user_id: str,
                             mode: str = "detailed") -> str:
     """Synthesize research sources into a digest using Claude via Locus Wrapped API."""
     prompt_styles = {
@@ -177,7 +181,11 @@ async def run_research_cycle(topic: str, balance: float, initial_balance: float,
     synthesis_mode = config["synthesis_prompt"]
 
     # 2. Exa search
-    search_results = await search_exa(topic, max_results=max_sources)
+    try:
+        search_results = await search_exa(topic, user_id=USER_ID, max_results=max_sources)
+    except Exception as e:
+        return {"digest": f"Halted: {e}", "sources_used": 0, "cost_estimate": 0, "budget_mode": "halted", "log_message": "insufficient credits"}
+
     if not search_results:
         return {
             "digest": f"No search results found for '{topic}'",
@@ -189,11 +197,17 @@ async def run_research_cycle(topic: str, balance: float, initial_balance: float,
 
     # 3. Firecrawl scrape
     for result in search_results:
-        content = await scrape_firecrawl(result["url"])
-        result["content"] = content
+        try:
+            content = await scrape_firecrawl(result["url"], user_id=USER_ID)
+            result["content"] = content
+        except Exception:
+            pass
 
     # 4. Claude synthesis
-    digest = await synthesize_claude(topic, search_results, mode=synthesis_mode)
+    try:
+        digest = await synthesize_claude(topic, search_results, user_id=USER_ID, mode=synthesis_mode)
+    except Exception as e:
+        digest = f"Synthesis halted: {e}"
 
     # 5. Email delivery
     if user_email:
