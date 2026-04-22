@@ -21,6 +21,7 @@ resources-shown.jsonl
 *unknown-design*.md
 *landing-page-prompt*.md
 *landing-page-design-prompt*.md
+timeline.jsonl
 
 # Environment variables
 .env
