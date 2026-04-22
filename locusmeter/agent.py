@@ -83,7 +83,7 @@ async def send_agentmail_warning(user: dict, warning_type: str):
                     "Content-Type": "application/json",
                 },
                 json={
-                    "to": [user_email],
+                    "to": [{"email": user_email}],
                     "inbox_id": inbox,
                     "subject": template["subject"],
                     "body": template["body"],
