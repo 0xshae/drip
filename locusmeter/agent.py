@@ -34,7 +34,8 @@ async def send_agentmail_warning(user: dict, warning_type: str):
     Types: 'low_credit', 'paused', 'restored'
     """
     inbox = os.getenv("AGENTMAIL_INBOX", "") or "shagun@agentmail.to"
-    if not LOCUS_API_KEY:
+    api_key = os.getenv("LOCUS_API_KEY", "")
+    if not api_key:
         await log_decision(user["user_id"],
                           f"AgentMail skip — no API key (would send: {warning_type})")
         return
@@ -77,7 +78,7 @@ async def send_agentmail_warning(user: dict, warning_type: str):
             resp = await client.post(
                 f"{LOCUS_API_BASE}/x402/agentmail-send-message",
                 headers={
-                    "Authorization": f"Bearer {LOCUS_API_KEY}",
+                    "Authorization": f"Bearer {api_key}",
                     "Content-Type": "application/json",
                 },
                 json={
