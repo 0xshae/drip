@@ -16,7 +16,7 @@
 
 Drip is a middleware layer that transforms subscription-based SaaS into pay-per-use utilities. It sits between your application code and BuildWithLocus's container infrastructure, metering compute usage and billing users in real USDC.
 
-The core innovation: developers deploy their app once via BuildWithLocus, and Drip automatically creates isolated containers for each user. When a user deposits credits, their container spins up. When credits drain to zero, the container hibernates. When they top up, it resumes instantly. Users pay only for compute they actually consume—no monthly subscription waste.
+The core innovation: developers deploy their app once via BuildWithLocus, and Drip automatically creates isolated containers for each user. By leveraging PayWithLocus and CheckoutWithLocus, it enables users to deposit USDC credits to pay for compute usage. When a user deposits credits, their container spins up. When credits drain to zero, the container hibernates. When they top up, it resumes instantly. Users pay only for compute they actually consume—no monthly subscription waste. The Drip agent and AgentMail work together to intelligently make decisions based on financial state and user behavior.
 
 ### Technical Elevator Pitch
 
