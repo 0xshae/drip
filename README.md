@@ -457,7 +457,6 @@ async def checkout_paid(request: Request):
 
 ### Badges for Implementation
 
-```
 ![Python](https://img.shields.io/badge/python-3.10+-3670A0?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-005571?logo=fastapi&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?logo=postgresql&logoColor=white)
@@ -466,7 +465,6 @@ async def checkout_paid(request: Request):
 ![BuildWithLocus](https://img.shields.io/badge/BuildWithLocus-%231F2430.svg?logo=servicestack&logoColor=white)
 ![PayWithLocus](https://img.shields.io/badge/PayWithLocus-%233A86FF.svg?logo=circle&logoColor=white)
 ![AgentMail](https://img.shields.io/badge/AgentMail-%2300C853.svg?logo=maildotru&logoColor=white)
-```
 
 ---
 
