@@ -1,0 +1,349 @@
+# Design Agent Prompt: Drip Landing Page Redesign
+
+## Context
+
+You are redesigning the landing page for **Drip** — a B2B2C middleware platform that enables SaaS companies to offer a **consumption-based ("pay-as-you-drink") billing model** alongside or instead of traditional subscriptions. The target audience is **SaaS business owners and technical founders**, not end users.
+
+The core insight the design must communicate: AI-powered products have made the old subscription model economically dangerous. Heavy users now cost more than their subscription fee. Light users churn because the price is too high. Drip fixes both sides of this problem simultaneously — and the mechanism is an autonomous agent that manages the pricing intelligence, not a static billing rule.
+
+Read everything below before touching a pixel.
+
+---
+
+## The Product Vision: What Drip Does
+
+Drip is middleware. SaaS companies integrate it via a Python SDK. After integration, their customers can pay for actual usage instead of (or in addition to) a monthly subscription.
+
+The power move: **the Drip agent manages the hybridity autonomously**. It monitors how each customer is using the service and can suggest or switch them to the most economical plan for their behavior. For example:
+
+> "I've noticed you're using this tool heavily this week — it would actually be $5 cheaper for you to switch to the Monthly Subscription for the next 30 days. Should I handle that for you?"
+
+This is the sentence the design must make visceral. The agent is not a rule-based billing system. It is an advocate for the customer, operating on behalf of the SaaS company. It surfaces price intelligence that humans would never manually compute, and it can act on that intelligence automatically.
+
+---
+
+## The Problems Drip Solves (for SaaS businesses)
+
+You must communicate these problems sharply. Use them as the emotional hook.
+
+### Problem 1: The Subscription Model Is Broken for AI Products
+
+Traditional SaaS had near-zero marginal cost — serving one more user was essentially free. AI changed that. GPU compute is expensive, variable, and tied to what users actually do. A "power user" running heavy AI jobs can cost 5x their subscription fee. A light user who logs in twice a month subsidizes them.
+
+The result: SaaS companies either eat losses from power users or raise prices and lose light users. They lose either way.
+
+### Problem 2: The Pricing Cliff (Revenue Leakage)
+
+Tiered subscriptions create cliffs. User A uses 2,900 units and pays the $50 tier. User B uses 3,100 units and must jump to the $100 tier for just 200 extra units — a $50 premium for $2 worth of marginal compute.
+
+User B does one of three things: churns angrily, underuses the product (leaves value on the table), or games the system (multiple accounts, open-source alternatives). The vendor loses revenue or customers every time someone hits a tier boundary.
+
+### Problem 3: The Waste Problem (Customer Friction)
+
+Users who buy a 3,000-unit subscription tier and use 1,500 units feel cheated. They paid for capacity they didn't use. This creates resentment, which drives churn. Pure consumption eliminates this — users pay for exactly what they consumed, no more.
+
+---
+
+## The Audience
+
+**Primary audience:** SaaS founders and CTOs at AI-powered companies experiencing margin pressure from subscription models. They know the pricing cliff problem. They've had to raise prices. They've watched users churn at tier boundaries. They want a better model but don't want to rebuild their billing stack from scratch.
+
+**Secondary audience:** New SaaS companies building AI-native products who want to launch with consumption billing from day one.
+
+**Not the audience:** End users of SaaS products. Individual consumers. General public.
+
+---
+
+## Page Structure & Sections
+
+### 1. Hero / Opening
+
+Single clear statement of value. Something in the direction of:
+
+**"Your subscription model is leaking revenue. Drip plugs the holes."**
+
+Or: **"Stop charging for the month. Start charging for the value."**
+
+Subheadline should name the pain: AI products have variable costs. Subscriptions don't. Drip bridges that gap with an agent that manages billing intelligence autonomously.
+
+The hero CTA should be "Get early access" or "Talk to us" — this is B2B, not self-serve signup. No "Start free trial" — that's consumer framing.
+
+### 2. Live Agent Demo (HIGH PRIORITY — near the top)
+
+This section is critical. It must be interactive or animated — not a static screenshot.
+
+**Scenario to demonstrate:** An AI writing assistant SaaS company uses Drip. The demo should walk through the following sequence in a live, animated, terminal-style log panel:
+
+```
+[09:14] Agent: checking usage for user@company.com this billing period
+[09:14] Agent: 47 AI generations this week — tracking ahead of monthly average
+[09:15] Agent: projected total: 380 generations → pay-as-you-drink cost: $19.00
+[09:15] Agent: monthly subscription cost: $20/month
+[09:15] Agent: switching to subscription would save this customer $1.00
+[09:15] Agent: preference set to 'suggest-only' — sending recommendation via email
+[09:16] Agent: "Hi Sarah, I've noticed you're using the tool heavily this week — 
+               you'd save $5 by switching to monthly for the next 30 days. 
+               Reply YES and I'll handle it."
+[09:17] User: YES
+[09:17] Agent: subscription activated — customer switched from consumption to monthly
+[09:17] Agent: your revenue for Sarah: $20.00 (previously projected: $14.20 if she'd churned)
+```
+
+The demo must make two things visible simultaneously:
+1. The agent working in real time — autonomous, watching, reasoning
+2. The SaaS business outcome — a customer who would have churned at a pricing cliff is retained
+
+Include a "Watch the agent work" or "Run demo" button. Cycle through different scenarios if interactive: heavy user, light user, user about to hit a tier cliff.
+
+### 3. The Problem Statement
+
+Two-column layout or alternating cards. Each card shows:
+- **The situation** (with real numbers)
+- **What currently happens** (churn, underuse, gaming)
+- **What Drip does instead**
+
+Use the specific examples:
+- User A: 2,900 units, $50 tier. User B: 3,100 units, forced to $100 tier. Drip: charges User B $52 for 3,100 units. User B stays.
+- User buys 3,000-unit tier, uses 1,500. Feels cheated. Drips: charges for 1,500. No waste. No resentment.
+- AI power user costs $75/month to serve, pays $50 subscription. Drip: their consumption billing pays $75. Business isn't subsidizing them.
+
+Tone: clinical and factual. These are math problems, not philosophical ones.
+
+### 4. Before / After: Apps That Benefit from Drip
+
+Show 3–4 real SaaS archetypes with a side-by-side comparison.
+
+**Format for each:**
+- App type (e.g., AI Writing Assistant)
+- Without Drip: tier structure, cliff problem, churn rate
+- With Drip: consumption model, no cliff, retention outcome
+
+**Suggested archetypes:**
+
+**AI Writing Assistant (e.g., Jasper-type)**
+- Without Drip: $49/month for 50k words. User writes 60k words in one month, must upgrade to $99 tier. Pays $50 extra for 10k words that cost $0.50 to generate. Churns instead.
+- With Drip: Pays $49 for their 50k-word baseline. Pays $0.50 for the extra 10k words. Total: $49.50. Stays.
+
+**Data Analytics Platform (e.g., Tableau-type)**
+- Without Drip: $150/month flat. Light user runs 3 reports/month. Feels ripped off. Churns after trial.
+- With Drip: Pay-per-query starting at free. Light user pays $8/month for their 3 reports. Keeps using. Eventually grows to power user.
+
+**Cloud Backup Service (e.g., Backblaze-type)**
+- Without Drip: 100GB user pays same as 5TB user. 100GB user leaves for cheaper option.
+- With Drip: 100GB user pays for 100GB. 5TB user pays for 5TB. Both happy. Zero churn from price mismatch.
+
+**Developer API Tool**
+- Without Drip: $200/month subscription. New developers won't commit. Churn before the 14-day trial ends.
+- With Drip: Pay $0.01 per API call. Developers start immediately, no commitment. Heavy users self-select into subscription tier.
+
+### 5. The Agent Intelligence Section (THE MARQUEE SECTION)
+
+This is the product's superpower. Design it to stop the reader.
+
+Headline: **"The agent is the billing department."**
+
+Explain: Traditional billing is a rule set ("charge $X on the 1st of the month"). Drip's agent is a reasoning system that:
+- Watches how each customer uses the product in real time
+- Computes which pricing model is economically optimal for that customer at any moment
+- Can autonomously switch them or send a recommendation
+- Manages the hybridity: subscription and consumption are not either/or — they're two modes the agent moves customers between based on actual behavior
+
+The key phrase must appear prominently (word it naturally in context, not as a direct quote):
+> "The agent noticed you're using this heavily this week — it would actually be cheaper to switch you to the monthly plan for 30 days. Want me to handle it?"
+
+This demonstrates that Drip isn't just metering — it's acting in the customer's financial interest, which builds trust and reduces churn.
+
+Show a visual of the agent's decision logic — could be a simple flowchart or animated decision tree:
+- Customer usage this period vs. subscription cost
+- If consumption > subscription: suggest/switch to subscription
+- If consumption < subscription: keep on consumption, save the customer money
+- At tier cliff: smooth consumption charge instead of forcing tier jump
+
+### 6. How Drip Works (Technical Credibility Without Revealing IP)
+
+This section is for the technical co-founder or CTO who needs to know how it integrates before approving it. It should be honest about the architecture without revealing proprietary implementation details (closed source).
+
+**Key things to communicate:**
+- Drip is middleware: it sits between your app and your billing/infrastructure layer
+- Integration is done via a Python SDK with a decorator (`@drip.meter`) — 5-minute integration for the basic case
+- The Drip agent runs a background loop, monitoring usage and balance state, making decisions every N seconds
+- Containers per user are provisioned and managed by BuildWithLocus (say this — it's a genuine technical differentiator)
+- Payments are processed via PayWithLocus (USDC-native, but users don't need to know that's happening)
+- The agent sends user notifications via AgentMail autonomously — the SaaS company doesn't write email copy
+
+Show a minimal code snippet:
+
+```python
+from drip import DripClient, DripConfig
+
+client = DripClient(DripConfig(
+    api_key="drip_live_...",
+))
+
+# This is all you add to your existing endpoint
+@client.meter(cost=0.007, event="ai_generation")
+async def generate_content(prompt: str, user_id: str):
+    return await your_existing_ai_call(prompt)
+```
+
+Caption: "One decorator. Drip handles metering, notifications, container lifecycle, and plan optimization from here."
+
+Then a simple architecture diagram:
+- Your App → Drip SDK → Drip Agent → BuildWithLocus (containers) + PayWithLocus (payments) + AgentMail (notifications)
+- Single direction of integration. No webhooks to build. No billing UI to design.
+
+Do NOT explain the internals of how containers are hibernated or how HMAC signatures work. That's the IP. Show enough to earn technical trust, not enough to replicate.
+
+### 7. Social Proof / CTA for SaaS Companies (The Conversion Section)
+
+Tone: urgent, peer-to-peer. This is one founder talking to another.
+
+Headline direction: **"Your best customers are leaving because your pricing model forces them to."**
+
+Body: The companies that win in the AI era are the ones that price for actual value delivered — not flat calendar months. Drip is the fastest way to get there. Integrate in a day. Keep the customers who would have churned at your tier boundary. Stop subsidizing power users with flat fees.
+
+Include customer testimonials (use placeholders for launch, mark clearly as "[TESTIMONIAL PLACEHOLDER]"):
+- [SaaS CEO] — "We saw 23% reduction in tier-cliff churn in the first month."
+- [CTO at AI startup] — "Integrated in 4 hours. The agent caught two customers about to churn and moved them to the right plan automatically."
+- [Founder] — "We were bleeding $2k/month on power users. Drip fixed that while we slept."
+
+CTA: "Get early access" — form with name, company name, monthly active users, current billing model. This is a waitlist/sales conversation starter, not a self-serve signup.
+
+### 8. Docs Teaser / Integration Guide
+
+Not a full docs page — a teaser that links to a dedicated docs page. Should feel like the first 3 paragraphs of a great API doc.
+
+Show:
+1. Install command: `pip install drip-sdk`
+2. The `@meter` decorator as primary integration pattern
+3. One full example (provision a user, meter a function, handle insufficient credits)
+
+```python
+# 1. Install
+pip install drip-sdk
+
+# 2. Initialize
+from drip import DripClient, DripConfig
+
+client = DripClient(DripConfig(api_key="drip_live_..."))
+
+# 3. Provision a user (creates their billing account)
+await client.provision_user(
+    user_id="user_abc",
+    email="sarah@company.com",
+    plan="consumption",          # or "subscription" or "hybrid"
+    initial_balance=5.0,
+)
+
+# 4. Meter any expensive function
+@client.meter(cost=0.007, event="ai_generation")
+async def generate_content(prompt: str, user_id: str):
+    return await your_ai_call(prompt)
+
+# If the user runs out of credits, Drip raises DripInsufficientCredits
+# The agent handles notifying the user and offering a top-up automatically
+```
+
+Link at bottom: "Read the full integration guide →"
+
+---
+
+## Dedicated Docs Page (Separate Page, Linked From Main)
+
+URL: `/docs` or `/how-it-works`
+
+This page is for the technical buyer who wants to understand the full system before committing. It should be professional, structured, and read like Stripe's docs — clear, authoritative, no fluff.
+
+**Sections to include:**
+
+### How Drip Works
+- The agent architecture: a background process monitoring usage state for all provisioned users
+- Billing modes: consumption (pure pay-per-use), subscription (flat monthly), hybrid (subscription floor + consumption overages)
+- Plan optimization: the agent computes cost for each user at each billing mode and can recommend or switch plans autonomously based on configurable policies
+
+### The @meter Decorator
+Explain parameters:
+- `cost`: USDC amount deducted per call
+- `event`: string label for the audit log
+- `user_id_param`: which kwarg contains the user identifier
+
+Show sync and async usage. Show how `DripInsufficientCredits` is raised and what to do with it.
+
+### User Provisioning
+Explain `provision_user` — what it creates, what parameters it accepts, what happens if the user already exists.
+
+### Lifecycle States
+Explain the state machine: `provisioning → active → low_credit → paused → active`
+Each transition is triggered by the agent's polling loop. Show what triggers each state and what the agent does at each transition (email via AgentMail, container hibernate/restore via BWL).
+
+### The Agent Loop
+High-level: the agent polls every N seconds (configurable). For each user, it:
+1. Checks current balance
+2. If balance > 20%: no action
+3. If balance ≤ 20%: sends low-credit warning via AgentMail
+4. If balance = 0: hibernates container, sends pause notification, queues restore check
+5. Periodically audits platform wallet health
+
+Small code comment showing the decision logic is fine — do NOT show the full `start_polling` implementation.
+
+### Billing Modes Detail
+Table comparing consumption vs subscription vs hybrid, with example cost calculation for a user who makes 3,100 units in a tiered-subscription world vs. Drip.
+
+### Webhook Integration
+One section explaining the top-up flow: user hits recharge link → CheckoutWithLocus session created → user pays → webhook fires → Drip credits balance → container auto-restores if paused.
+
+---
+
+## Design System & Visual Language
+
+### Tone
+The visual language must be **enterprise-credible but not enterprise-boring**. Think Stripe's dashboard mixed with Linear's typography. Technical but accessible. No consumer-y gradients. No stock photos of smiling people.
+
+### Color Palette
+- Primary background: off-white or very light gray (not pure white — too flat)
+- Accent: deep indigo or electric blue — signals intelligence, precision, technology
+- Status indicators: keep the semantic colors
+  - Active/healthy: green (#10B981)
+  - Warning/low credit: amber (#F59E0B)
+  - Paused/churned: red (#EF4444)
+  - Restoring: blue (#3B82F6)
+- Avoid: warm pastels, anything that reads "startup landing page"
+
+### Typography
+- Headlines: tight tracking, heavy weight, high contrast
+- Body: 16–18px, generous line height, max 70 characters per line
+- Monospace: for all code, agent logs, and technical labels — JetBrains Mono or similar
+- No display fonts that feel decorative
+
+### Interaction Design
+- The agent log demo must animate in real time — log lines appearing with a cursor
+- Status badge transitions should be smooth (active → low credit → paused)
+- No heavy animations. One thing moving at a time.
+- The before/after comparisons can use a toggle or tab for clean switching
+
+### Components
+- Agent log panel: dark terminal background, monospace text, timestamp prefix, color-coded by log level
+- Status badge: small pill with semantic color + dot
+- Code blocks: syntax-highlighted, copyable
+- Testimonial cards: simple — name, company, quote, no avatar photos (don't have real ones yet)
+
+---
+
+## Things to Avoid
+
+- Do not position Drip as a consumer product. The page sells to SaaS businesses.
+- Do not use "wallet", "USDC", "crypto" language in headlines or hero copy. This is billing middleware, not a crypto product. The underlying rails use USDC but that's an implementation detail.
+- Do not show pricing for Drip itself on the landing page — this is a sales conversation product.
+- Do not make it look like a developer tool homepage (GitHub-aesthetic, dark mode default). The buyer is a business owner, not a hacker.
+- Do not use the word "blockchain" anywhere.
+- Do not make the agent feel like a chatbot. It is an autonomous financial decision-maker.
+
+---
+
+## The One Thing
+
+If the design communicates one thing, it should be this:
+
+**Your customers are churning at your pricing cliff right now. Drip's agent catches them before they fall.**
+
+Everything else — the hybrid model, the code snippets, the architecture diagram — is proof that this is real and you can ship it in a day.
