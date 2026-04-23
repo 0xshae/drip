@@ -97,9 +97,14 @@ async def init_tables():
             used_at INTEGER
         );
 
-        -- Add saas_account_id to users if not exists
-        ALTER TABLE users ADD COLUMN saas_account_id TEXT;
     """)
+    
+    # Safely add saas_account_id if not exists
+    try:
+        await db.execute("ALTER TABLE users ADD COLUMN saas_account_id TEXT")
+    except sqlite3.OperationalError:
+        pass # Already exists
+        
     await db.commit()
 
 
