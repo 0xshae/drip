@@ -86,13 +86,26 @@ async def health():
 async def provision_user(req: UserCreate):
     """Create a new user and spin up their BWL container."""
     try:
+        # Handle backward compatibility for research agent
+        metadata = req.metadata or {}
+        if req.topic:
+            metadata["topic"] = req.topic
+        
+        # Determine consumption cost
+        unit_cost = req.consumption_unit_cost
+        if req.credit_rate is not None:
+            unit_cost = req.credit_rate
+
         user = await client.provision_user(
             user_id=req.user_id,
             email=req.email,
+            plan=req.plan,
             initial_balance=req.initial_balance,
-            credit_rate=req.credit_rate,
+            consumption_unit_cost=unit_cost,
+            subscription_cost=req.subscription_monthly_cost,
+            included_units=req.subscription_included_units,
             container_image=os.getenv("GHCR_IMAGE", "ghcr.io/0xshae/locusmeter-research:latest"),
-            metadata={"topic": req.topic}
+            metadata=metadata
         )
         return {"ok": True, "user": user}
     except Exception as e:
@@ -164,15 +177,30 @@ async def get_state():
 
 # ---------- Dashboard (HTMX UI) ----------
 
-@app.get("/debug/env")
-async def debug_env():
-    """Debug endpoint to check env vars."""
-    import os
+@app.post("/users/{user_id}/plan")
+async def update_user_plan(user_id: str, plan: str):
+    """Update a user's billing plan."""
+    try:
+        user = await client.get_user(user_id)
+        # Update user in DB
+        db_conn = await db.get_db()
+        await db_conn.execute("UPDATE users SET plan = ? WHERE user_id = ?", (plan, user_id))
+        await db_conn.commit()
+        await db.add_log(user_id, f"plan updated to: {plan}")
+        return {"ok": True}
+    except Exception as e:
+        raise HTTPException(400, str(e))
+
+
+@app.get("/debug/config")
+async def debug_config():
+    """Returns safe configuration info."""
     return {
-        "LOCUS_API_KEY": os.getenv("LOCUS_API_KEY", "missing"),
-        "BWL_API_KEY": os.getenv("BWL_API_KEY", "missing"),
-        "AGENTMAIL_INBOX": os.getenv("AGENTMAIL_INBOX", "missing"),
+        "poll_interval": client.config.poll_interval_seconds,
+        "mock_drain": client.config.mock_drain,
+        "api_base": client.config.locus_api_base
     }
+
 
 @app.get("/dashboard", response_class=HTMLResponse)
 async def dashboard(request: Request):

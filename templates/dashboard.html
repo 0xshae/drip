@@ -1,90 +1,126 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard{% endblock %}
+{% block title %}Demo Dashboard{% endblock %}
 
 {% block content %}
+<!-- Help Banner -->
+<div class="help-banner">
+    <div class="help-banner-content">
+        <div class="help-icon">💡</div>
+        <div class="help-text">
+            <strong>Welcome to the Drip Demo.</strong> This dashboard shows a live agent monitoring user containers in real-time.
+            <span class="help-details">
+                The agent polls every 2 seconds, watching credit balances and making decisions. Green batteries = active containers.
+                Watch the <strong>Agent Reasoning Log</strong> to see autonomous decisions about hibernation, restoration, and budget optimization.
+                Use the controls below to simulate a full lifecycle: provision → drain → hibernate → top-up → restore.
+            </span>
+        </div>
+    </div>
+</div>
+
 <section class="section">
-    <div class="section-title">
-        <span>📊</span> Agent Dashboard
+    <!-- Spotlight Agent Dashboard Header -->
+    <div class="dashboard-spotlight">
+        <div class="spotlight-header">
+            <div class="spotlight-pulse"></div>
+            <div>
+                <h1 class="spotlight-title">
+                    <span class="spotlight-icon">●</span>
+                    Agent Dashboard
+                </h1>
+                <p class="spotlight-subtitle">Autonomous billing intelligence · Live monitoring</p>
+            </div>
+        </div>
+
+        <!-- Spotlight Stats -->
+        <div class="spotlight-stats">
+            <div class="spotlight-stat">
+                <div class="spotlight-stat-value" id="stat-active">{{ users|selectattr('status', 'in', ['active', 'low_credit'])|list|length }}</div>
+                <div class="spotlight-stat-label">Active Containers</div>
+            </div>
+            <div class="spotlight-stat-divider"></div>
+            <div class="spotlight-stat">
+                <div class="spotlight-stat-value" id="stat-paused">{{ users|selectattr('status', 'equalto', 'paused')|list|length }}</div>
+                <div class="spotlight-stat-label">Hibernated</div>
+            </div>
+            <div class="spotlight-stat-divider"></div>
+            <div class="spotlight-stat">
+                <div class="spotlight-stat-value" id="stat-total">{{ users|length }}</div>
+                <div class="spotlight-stat-label">Total Users</div>
+            </div>
+        </div>
     </div>
 
-    <!-- Stats Row (updated live by JS) -->
-    <div class="grid-3" style="margin-bottom: 24px;">
-        <div class="card">
-            <div class="card-title">Active Users</div>
-            <div class="stat-value" id="stat-active">{{ users|selectattr('status', 'in', ['active', 'low_credit'])|list|length }}</div>
-            <div class="stat-label">containers running</div>
-        </div>
-        <div class="card">
-            <div class="card-title">Paused</div>
-            <div class="stat-value" id="stat-paused" style="color: var(--warning);">{{ users|selectattr('status', 'equalto', 'paused')|list|length }}</div>
-            <div class="stat-label">awaiting recharge</div>
-        </div>
-        <div class="card">
-            <div class="card-title">Total Users</div>
-            <div class="stat-value" id="stat-total">{{ users|length }}</div>
-            <div class="stat-label">all time</div>
-        </div>
-    </div>
+    <!-- Main Dashboard Grid -->
+    <div class="dashboard-grid">
+        <!-- Users Panel - Enlarged -->
+        <div class="users-section">
+            <div class="panel-header">
+                <div class="panel-title">
+                    <span class="panel-icon">▦</span>
+                    User Containers
+                </div>
+                <div class="panel-badge">{{ users|length }} active</div>
+            </div>
 
-    <!-- Three-column layout: Users | Agent Log | Research Findings -->
-    <div class="grid-3-layout">
-        <!-- Users Panel -->
-        <div>
-            <div class="card" style="margin-bottom: 20px;">
-                <div class="card-title">👥 Users</div>
+            <div class="card users-card">
                 <div id="users-panel">
                 {% if users %}
                     {% for user in users %}
                     {% set pct = (user.balance_usdc / user.initial_balance * 100) if user.initial_balance > 0 else 0 %}
-                    <div class="user-card" data-user-id="{{ user.user_id }}">
-                        <div class="user-header">
-                            <div>
-                                <div style="font-weight: 600; font-size: 14px;">{{ user.user_id }}</div>
-                                <div style="font-size: 11px; color: var(--text-muted);">{{ user.topic }}</div>
-                            </div>
-                            <div class="user-status-badge" data-status="{{ user.status }}">
-                                {% if user.status == 'active' %}
-                                    <span class="badge badge-active">● Active</span>
-                                {% elif user.status == 'low_credit' %}
-                                    <span class="badge badge-warning">⚠ Low</span>
-                                {% elif user.status == 'paused' %}
-                                    <span class="badge badge-paused">⏸ Paused</span>
-                                {% elif user.status == 'restoring' %}
-                                    <span class="badge badge-restoring">🔄 Restoring</span>
-                                {% else %}
-                                    <span class="badge badge-provisioning">⏳ {{ user.status }}</span>
-                                {% endif %}
+                    <div class="user-row-large" data-user-id="{{ user.user_id }}">
+                        <div class="user-main">
+                            <div class="user-avatar">{{ user.user_id[0]|upper }}</div>
+                            <div class="user-info">
+                                <div class="user-name">{{ user.user_id }}</div>
+                                <div class="user-topic">{{ user.topic }}</div>
                             </div>
                         </div>
-                        <div class="user-body">
-                            <!-- Battery Bar -->
-                            <div class="battery-wrapper">
-                                <div class="battery" data-pct="{{ pct|int }}">
-                                    <div class="battery-cap"></div>
-                                    <div class="battery-body">
-                                        <div class="battery-fill {% if pct > 50 %}healthy{% elif pct > 20 %}caution{% elif pct > 10 %}low{% elif pct > 0 %}critical{% else %}dead{% endif %}"
-                                             style="height: {{ pct }}%"></div>
-                                    </div>
-                                </div>
-                                <div class="battery-label" data-balance="{{ '%.2f'|format(user.balance_usdc) }}">
-                                    ${{ "%.2f"|format(user.balance_usdc) }}
+
+                        <!-- Large Battery Bar -->
+                        <div class="battery-section">
+                            <div class="battery-bar-large">
+                                <div class="battery-track">
+                                    <div class="battery-fill-large {% if pct > 50 %}healthy{% elif pct > 20 %}caution{% elif pct > 10 %}low{% elif pct > 0 %}critical{% else %}dead{% endif %}"
+                                         style="width: {{ pct }}%"></div>
                                 </div>
                             </div>
-                            <!-- Actions -->
-                            <div class="user-actions">
+                            <div class="battery-info">
+                                <span class="balance-display" data-balance="{{ '%.2f'|format(user.balance_usdc) }}">${{ "%.2f"|format(user.balance_usdc) }}</span>
+                                <span class="balance-percent">{{ pct|int }}%</span>
+                            </div>
+                        </div>
+
+                        <div class="user-actions-large">
+                            <div class="user-status-badge" data-status="{{ user.status }}">
+                                {% if user.status == 'active' %}
+                                    <span class="status-pill status-active">● Active</span>
+                                {% elif user.status == 'low_credit' %}
+                                    <span class="status-pill status-low">⚠ Low</span>
+                                {% elif user.status == 'paused' %}
+                                    <span class="status-pill status-paused">⏸ Hibernated</span>
+                                {% elif user.status == 'restoring' %}
+                                    <span class="status-pill status-restoring">🔄 Restoring</span>
+                                {% else %}
+                                    <span class="status-pill status-provisioning">⏳ {{ user.status }}</span>
+                                {% endif %}
+                            </div>
+
+                            <div class="action-buttons">
                                 {% if user.status == 'active' or user.status == 'low_credit' %}
-                                    <button class="btn btn-danger btn-sm"
+                                    <button class="btn btn-icon btn-hibernate"
                                             hx-post="/teardown?user_id={{ user.user_id }}"
                                             hx-swap="none"
-                                            hx-confirm="Force teardown {{ user.user_id }}?">
-                                        ⏸ Teardown
+                                            hx-confirm="Force hibernate {{ user.user_id }}?"
+                                            title="Hibernate">
+                                        ⏸
                                     </button>
                                 {% elif user.status == 'paused' %}
-                                    <button class="btn btn-success btn-sm"
+                                    <button class="btn btn-icon btn-restore"
                                             hx-post="/restore?user_id={{ user.user_id }}"
-                                            hx-swap="none">
-                                        ▶ Restore
+                                            hx-swap="none"
+                                            title="Restore">
+                                        ▶
                                     </button>
                                 {% endif %}
                             </div>
@@ -92,33 +128,37 @@
                     </div>
                     {% endfor %}
                 {% else %}
-                    <div class="empty-state">
-                        <div class="empty-state-icon">🌊</div>
-                        <p>No users yet. Provision one below!</p>
+                    <div class="empty-state-large">
+                        <div class="empty-icon">◉</div>
+                        <h3>No active containers</h3>
+                        <p>Provision a new user below to see the agent in action.</p>
                     </div>
                 {% endif %}
                 </div>
             </div>
 
             <!-- Provision Form -->
-            <div class="card">
-                <div class="card-title">➕ Provision New User</div>
-                <form id="provision-form">
-                    <div class="grid-2">
+            <div class="card provision-card">
+                <div class="panel-title">
+                    <span class="panel-icon">+</span>
+                    Provision New Container
+                </div>
+                <form id="provision-form" class="provision-form">
+                    <div class="form-row">
                         <div class="form-group">
                             <label class="form-label">User ID</label>
                             <input class="form-input" id="prov-user-id" placeholder="alice_01" required>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Email</label>
-                            <input class="form-input" id="prov-email" type="email" placeholder="shae@agentmail.to" required>
+                            <input class="form-input" id="prov-email" type="email" placeholder="user@example.com" required>
                         </div>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Research Topic</label>
-                        <input class="form-input" id="prov-topic" placeholder="AI agent infrastructure trends" required>
+                        <input class="form-input" id="prov-topic" placeholder="Cloud infrastructure trends" required>
                     </div>
-                    <div class="grid-2">
+                    <div class="form-row">
                         <div class="form-group">
                             <label class="form-label">Initial Balance (USDC)</label>
                             <input class="form-input" id="prov-balance" type="number" step="0.01" value="1.00" min="0.10">
@@ -128,102 +168,706 @@
                             <input class="form-input" id="prov-rate" type="number" step="0.01" value="0.05" min="0.01">
                         </div>
                     </div>
-                    <div style="display: flex; gap: 12px; margin-top: 8px;">
-                        <button type="submit" class="btn btn-primary" id="provision-btn">Provision Container</button>
-                    </div>
+                    <button type="submit" class="btn btn-primary btn-block" id="provision-btn">
+                        <span class="btn-icon-left">+</span>
+                        Provision Container
+                    </button>
                     <div id="provision-result" style="margin-top: 12px; display: none;"></div>
                 </form>
             </div>
         </div>
 
-        <!-- Agent Reasoning Log -->
-        <div>
-            <div class="card" style="position: sticky; top: 80px;">
-                <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
-                    <span>🧠 Agent Reasoning Log</span>
-                    <span id="log-pulse" class="log-live-dot">● LIVE</span>
+        <!-- Agent Reasoning Log - Prominent -->
+        <div class="log-section">
+            <div class="panel-header">
+                <div class="panel-title">
+                    <span class="panel-icon">◉</span>
+                    Agent Reasoning Log
                 </div>
-                <div id="agent-logs" class="log-container">
+                <div class="live-indicator">
+                    <span class="live-dot"></span>
+                    LIVE
+                </div>
+            </div>
+
+            <div class="card log-card">
+                <div id="agent-logs" class="log-container-large">
                     {% for log in logs %}
-                    <div class="log-entry {% if '⚠️' in log.message or 'WARNING' in log.message or 'LOW CREDIT' in log.message %}warning{% elif 'error' in log.message|lower or 'failed' in log.message|lower or '💀' in log.message %}error{% elif '💰' in log.message or 'provisioned' in log.message or '📊' in log.message %}success{% elif '🔬' in log.message %}research{% else %}system{% endif %}" data-log-id="{{ log.id }}">
-                        <span class="log-ts">{{ log.ts[-8:] }}</span>
-                        <span class="log-user">{{ log.user_id or 'system' }}</span>
-                        <span class="log-msg">{{ log.message }}</span>
+                    <div class="log-entry-large {% if '⚠️' in log.message or 'WARNING' in log.message or 'LOW CREDIT' in log.message %}log-warning{% elif 'error' in log.message|lower or 'failed' in log.message|lower or '💀' in log.message %}log-error{% elif '💰' in log.message or 'provisioned' in log.message or '📊' in log.message %}log-success{% elif '🔬' in log.message %}log-research{% else %}log-system{% endif %}" data-log-id="{{ log.id }}">
+                        <span class="log-timestamp">{{ log.ts[-8:] }}</span>
+                        <span class="log-user-tag">{{ log.user_id or 'system' }}</span>
+                        <span class="log-message">{{ log.message }}</span>
                     </div>
                     {% endfor %}
                     {% if not logs %}
-                    <div class="empty-state" style="padding: 24px;">
-                        <p>Agent starting up... logs will appear here.</p>
+                    <div class="empty-state-log">
+                        <div class="pulse-ring"></div>
+                        <p>Agent initializing...</p>
+                        <span class="empty-sub">Waiting for first container</span>
                     </div>
                     {% endif %}
                 </div>
             </div>
         </div>
 
-        <!-- Research Findings Panel -->
-        <div>
-            <div class="card" id="research-panel" style="position: sticky; top: 80px;">
-                <div class="card-title">🔬 Research Findings</div>
+        <!-- Research & Demo Controls -->
+        <div class="sidebar-section">
+            <!-- Research Panel -->
+            <div class="panel-header">
+                <div class="panel-title">
+                    <span class="panel-icon">◇</span>
+                    Research Findings
+                </div>
+            </div>
+
+            <div class="card research-card" id="research-panel">
                 <div id="research-content">
-                    <div class="empty-state" style="padding: 24px;">
-                        <div class="empty-state-icon" style="font-size: 32px;">🧪</div>
-                        <p style="font-size: 12px;">Click "Trigger Research" to see live findings here</p>
+                    <div class="empty-state-sidebar">
+                        <div class="empty-icon-small">◈</div>
+                        <p>No research yet</p>
+                        <span>Trigger a research cycle to see findings here</span>
                     </div>
+                </div>
+            </div>
+
+            <!-- Demo Controls -->
+            <div class="panel-header" style="margin-top: 24px;">
+                <div class="panel-title">
+                    <span class="panel-icon">▶</span>
+                    Demo Controls
+                </div>
+            </div>
+
+            <div class="card controls-card">
+                <div class="controls-grid">
+                    <button class="btn btn-primary btn-control"
+                            hx-post="/demo/drain"
+                            hx-swap="none"
+                            hx-confirm="Start demo drain? Simulates credit depletion.">
+                        <span class="btn-symbol">▶</span>
+                        <span class="btn-label">Start Drain</span>
+                    </button>
+                    <button class="btn btn-secondary btn-control"
+                            hx-post="/demo/topup"
+                            hx-swap="none">
+                        <span class="btn-symbol">+</span>
+                        <span class="btn-label">Simulate Top-Up</span>
+                    </button>
+                    <button class="btn btn-secondary btn-control"
+                            hx-post="/demo/research"
+                            hx-swap="none">
+                        <span class="btn-symbol">◇</span>
+                        <span class="btn-label">Trigger Research</span>
+                    </button>
+                    <button class="btn btn-danger btn-control"
+                            hx-post="/demo/reset"
+                            hx-swap="none"
+                            hx-confirm="Reset entire demo? This deletes ALL users and logs.">
+                        <span class="btn-symbol">↻</span>
+                        <span class="btn-label">Reset Demo</span>
+                    </button>
+                </div>
+                <div class="controls-help">
+                    Demo compresses the full lifecycle into ~2 minutes:
+                    <br>active → low credit → hibernation → top-up → restore
                 </div>
             </div>
         </div>
     </div>
-
-    <!-- Demo Controls -->
-    <div class="card" style="margin-top: 24px;">
-        <div class="card-title">🎮 Demo Controls</div>
-        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
-            <button class="btn btn-primary"
-                    hx-post="/demo/drain"
-                    hx-swap="none"
-                    hx-confirm="Start demo drain? This will simulate credit depletion.">
-                ▶️ Start Demo Drain
-            </button>
-            <button class="btn btn-secondary"
-                    hx-post="/demo/topup"
-                    hx-swap="none">
-                💰 Simulate Top-Up
-            </button>
-            <button class="btn btn-secondary"
-                    hx-post="/demo/research"
-                    hx-swap="none">
-                🔬 Trigger Research
-            </button>
-            <button class="btn btn-danger" style="margin-left: auto;"
-                    hx-post="/demo/reset"
-                    hx-swap="none"
-                    hx-confirm="Reset entire demo? This deletes ALL users and logs.">
-                🔄 Reset Demo
-            </button>
-        </div>
-        <div style="margin-top: 12px; font-size: 12px; color: var(--text-muted);">
-            Demo drain compresses the full lifecycle into ~2 minutes: 
-            active → low credit warning → budget reduction → teardown → top-up → restore
-        </div>
-    </div>
 </section>
 
+<style>
+    /* Help Banner */
+    .help-banner {
+        background: linear-gradient(135deg, rgba(0, 184, 217, 0.1), rgba(59, 130, 246, 0.05));
+        border: 1px solid rgba(0, 184, 217, 0.2);
+        border-radius: 12px;
+        padding: 20px 24px;
+        margin-bottom: 32px;
+        margin-top: 20px;
+    }
+    .help-banner-content {
+        display: flex;
+        gap: 16px;
+        align-items: flex-start;
+    }
+    .help-icon {
+        font-size: 24px;
+        flex-shrink: 0;
+    }
+    .help-text {
+        color: #A1A1AA;
+        font-size: 14px;
+        line-height: 1.6;
+    }
+    .help-text strong {
+        color: #fff;
+    }
+    .help-details {
+        display: block;
+        margin-top: 8px;
+        color: #71717A;
+        font-size: 13px;
+    }
+
+    /* Spotlight Dashboard Header */
+    .dashboard-spotlight {
+        background: linear-gradient(135deg, #111111 0%, #0D0D0D 100%);
+        border: 1px solid #1F1F1F;
+        border-radius: 16px;
+        padding: 32px;
+        margin-bottom: 32px;
+        box-shadow: 0 0 40px rgba(0, 184, 217, 0.08);
+    }
+    .spotlight-header {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        margin-bottom: 28px;
+    }
+    .spotlight-pulse {
+        width: 16px;
+        height: 16px;
+        background: #10B981;
+        border-radius: 50%;
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+        animation: spotlightPulse 2s infinite;
+    }
+    @keyframes spotlightPulse {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+        50% { box-shadow: 0 0 0 12px rgba(16, 185, 129, 0); }
+    }
+    .spotlight-title {
+        font-size: 32px;
+        font-weight: 600;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin: 0;
+    }
+    .spotlight-icon {
+        color: #10B981;
+        font-size: 16px;
+    }
+    .spotlight-subtitle {
+        color: #71717A;
+        font-size: 15px;
+        margin: 6px 0 0 0;
+    }
+
+    /* Spotlight Stats */
+    .spotlight-stats {
+        display: flex;
+        align-items: center;
+        gap: 48px;
+    }
+    .spotlight-stat-divider {
+        width: 1px;
+        height: 48px;
+        background: #2A2A2A;
+    }
+    .spotlight-stat-value {
+        font-size: 48px;
+        font-weight: 700;
+        color: #fff;
+        font-family: 'JetBrains Mono', monospace;
+        line-height: 1;
+    }
+    .spotlight-stat-label {
+        font-size: 14px;
+        color: #71717A;
+        margin-top: 8px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    /* Dashboard Grid */
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: 1.1fr 1.3fr 0.6fr;
+        gap: 24px;
+    }
+    @media (max-width: 1200px) {
+        .dashboard-grid { grid-template-columns: 1fr 1fr; }
+        .sidebar-section { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    }
+    @media (max-width: 768px) {
+        .dashboard-grid,
+        .sidebar-section { grid-template-columns: 1fr; }
+    }
+
+    /* Panel Headers */
+    .panel-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+    }
+    .panel-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: #A1A1AA;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .panel-icon {
+        color: #00B8D9;
+        font-size: 16px;
+    }
+    .panel-badge {
+        background: rgba(0, 184, 217, 0.1);
+        color: #00B8D9;
+        font-size: 13px;
+        font-weight: 500;
+        padding: 4px 12px;
+        border-radius: 20px;
+    }
+    .live-indicator {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+        font-weight: 600;
+        color: #10B981;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .live-dot {
+        width: 8px;
+        height: 8px;
+        background: #10B981;
+        border-radius: 50%;
+        animation: livePulse 1.5s infinite;
+    }
+    @keyframes livePulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.4; }
+    }
+
+    /* Cards */
+    .card {
+        background: #0D0D0D;
+        border: 1px solid #1F1F1F;
+        border-radius: 12px;
+        padding: 0;
+        overflow: hidden;
+    }
+    .users-card {
+        margin-bottom: 24px;
+    }
+    .log-card {
+        height: 600px;
+    }
+    .research-card {
+        min-height: 200px;
+    }
+    .controls-card {
+        padding: 20px;
+    }
+
+    /* Large User Row */
+    .user-row-large {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        padding: 20px 24px;
+        border-bottom: 1px solid #1F1F1F;
+        transition: background 0.2s;
+    }
+    .user-row-large:hover {
+        background: #111111;
+    }
+    .user-row-large:last-child {
+        border-bottom: none;
+    }
+    .user-main {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        min-width: 200px;
+    }
+    .user-avatar {
+        width: 48px;
+        height: 48px;
+        background: linear-gradient(135deg, #00B8D9, #3B82F6);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        font-weight: 600;
+        color: #0A0A0A;
+    }
+    .user-name {
+        font-size: 16px;
+        font-weight: 600;
+        color: #fff;
+    }
+    .user-topic {
+        font-size: 13px;
+        color: #71717A;
+        margin-top: 2px;
+    }
+
+    /* Large Battery Bar */
+    .battery-section {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    .battery-bar-large {
+        width: 100%;
+    }
+    .battery-track {
+        height: 12px;
+        background: #1F1F1F;
+        border-radius: 6px;
+        overflow: hidden;
+    }
+    .battery-fill-large {
+        height: 100%;
+        border-radius: 6px;
+        transition: width 0.5s ease, background 0.3s ease;
+    }
+    .battery-fill-large.healthy { background: linear-gradient(90deg, #10B981, #22c55e); }
+    .battery-fill-large.caution { background: linear-gradient(90deg, #F59E0B, #fbbf24); }
+    .battery-fill-large.low { background: linear-gradient(90deg, #EF4444, #f87171); }
+    .battery-fill-large.critical { background: #EF4444; animation: criticalPulse 1s infinite; }
+    .battery-fill-large.dead { background: #3F3F46; width: 0 !important; }
+    @keyframes criticalPulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.6; }
+    }
+    .battery-info {
+        display: flex;
+        justify-content: space-between;
+        font-family: 'JetBrains Mono', monospace;
+    }
+    .balance-display {
+        font-size: 18px;
+        font-weight: 600;
+        color: #fff;
+    }
+    .balance-percent {
+        font-size: 14px;
+        color: #71717A;
+    }
+
+    /* User Actions */
+    .user-actions-large {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+    .status-pill {
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-size: 13px;
+        font-weight: 500;
+        white-space: nowrap;
+    }
+    .status-active {
+        background: rgba(16, 185, 129, 0.1);
+        color: #10B981;
+        border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    .status-low {
+        background: rgba(245, 158, 11, 0.1);
+        color: #F59E0B;
+        border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+    .status-paused {
+        background: rgba(239, 68, 68, 0.1);
+        color: #EF4444;
+        border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+    .status-restoring {
+        background: rgba(59, 130, 246, 0.1);
+        color: #3B82F6;
+        border: 1px solid rgba(59, 130, 246, 0.3);
+    }
+    .status-provisioning {
+        background: rgba(59, 130, 246, 0.1);
+        color: #3B82F6;
+        border: 1px solid rgba(59, 130, 246, 0.3);
+    }
+
+    /* Action Buttons */
+    .action-buttons {
+        display: flex;
+        gap: 8px;
+    }
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 10px 18px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: none;
+        background: none;
+        color: inherit;
+    }
+    .btn-icon {
+        width: 36px;
+        height: 36px;
+        padding: 0;
+        border-radius: 8px;
+    }
+    .btn-hibernate {
+        background: rgba(245, 158, 11, 0.1);
+        color: #F59E0B;
+        border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+    .btn-hibernate:hover {
+        background: rgba(245, 158, 11, 0.2);
+    }
+    .btn-restore {
+        background: rgba(16, 185, 129, 0.1);
+        color: #10B981;
+        border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    .btn-restore:hover {
+        background: rgba(16, 185, 129, 0.2);
+    }
+    .btn-primary {
+        background: #00B8D9;
+        color: #0A0A0A;
+    }
+    .btn-primary:hover {
+        background: #00a5c4;
+    }
+    .btn-secondary {
+        background: #1F1F1F;
+        color: #A1A1AA;
+        border: 1px solid #2A2A2A;
+    }
+    .btn-secondary:hover {
+        background: #2A2A2A;
+        color: #fff;
+    }
+    .btn-danger {
+        background: rgba(239, 68, 68, 0.1);
+        color: #EF4444;
+        border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+    .btn-danger:hover {
+        background: rgba(239, 68, 68, 0.2);
+    }
+    .btn-block {
+        width: 100%;
+        margin-top: 16px;
+    }
+
+    /* Log Container - Large */
+    .log-container-large {
+        height: 100%;
+        overflow-y: auto;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 13px;
+        padding: 16px;
+        background: #0D0D0D;
+    }
+    .log-entry-large {
+        display: flex;
+        gap: 12px;
+        padding: 10px 0;
+        border-left: 3px solid transparent;
+        padding-left: 12px;
+        margin-bottom: 4px;
+        border-radius: 0 6px 6px 0;
+        transition: background 0.2s;
+    }
+    .log-entry-large:hover {
+        background: #111111;
+    }
+    .log-entry-large.log-system { border-left-color: #3B82F6; }
+    .log-entry-large.log-warning { border-left-color: #F59E0B; }
+    .log-entry-large.log-error { border-left-color: #EF4444; }
+    .log-entry-large.log-success { border-left-color: #10B981; }
+    .log-entry-large.log-research { border-left-color: #00B8D9; }
+    .log-timestamp {
+        color: #52525B;
+        flex-shrink: 0;
+        font-size: 12px;
+    }
+    .log-user-tag {
+        color: #00B8D9;
+        flex-shrink: 0;
+        min-width: 90px;
+        font-weight: 500;
+    }
+    .log-message {
+        color: #E4E4E7;
+        word-break: break-word;
+    }
+
+    /* Empty States */
+    .empty-state-large {
+        text-align: center;
+        padding: 60px 24px;
+        color: #71717A;
+    }
+    .empty-icon {
+        font-size: 64px;
+        margin-bottom: 20px;
+        color: #2A2A2A;
+    }
+    .empty-state-large h3 {
+        color: #fff;
+        font-size: 20px;
+        font-weight: 600;
+        margin-bottom: 8px;
+    }
+    .empty-state-log {
+        text-align: center;
+        padding: 100px 24px;
+        color: #52525B;
+    }
+    .pulse-ring {
+        width: 40px;
+        height: 40px;
+        border: 2px solid #1F1F1F;
+        border-top-color: #00B8D9;
+        border-radius: 50%;
+        margin: 0 auto 20px;
+        animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+    .empty-sub {
+        display: block;
+        margin-top: 8px;
+        font-size: 13px;
+    }
+    .empty-state-sidebar {
+        text-align: center;
+        padding: 40px 24px;
+        color: #52525B;
+    }
+    .empty-icon-small {
+        font-size: 32px;
+        margin-bottom: 12px;
+        color: #2A2A2A;
+    }
+    .empty-state-sidebar span {
+        font-size: 12px;
+        display: block;
+        margin-top: 6px;
+    }
+
+    /* Provision Form */
+    .provision-card {
+        padding: 24px;
+    }
+    .provision-form {
+        margin-top: 16px;
+    }
+    .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+    }
+    .form-group {
+        margin-bottom: 16px;
+    }
+    .form-label {
+        display: block;
+        font-size: 13px;
+        font-weight: 500;
+        color: #71717A;
+        margin-bottom: 6px;
+    }
+    .form-input {
+        width: 100%;
+        padding: 12px 14px;
+        background: #111111;
+        border: 1px solid #1F1F1F;
+        border-radius: 8px;
+        color: #fff;
+        font-size: 14px;
+        transition: border-color 0.2s;
+    }
+    .form-input:focus {
+        outline: none;
+        border-color: #00B8D9;
+    }
+    .form-input::placeholder {
+        color: #52525B;
+    }
+    .btn-icon-left {
+        font-size: 18px;
+    }
+
+    /* Controls */
+    .controls-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+    }
+    .btn-control {
+        flex-direction: column;
+        padding: 16px 12px;
+        gap: 8px;
+        height: auto;
+        min-height: 80px;
+    }
+    .btn-symbol {
+        font-size: 24px;
+    }
+    .btn-label {
+        font-size: 12px;
+    }
+    .controls-help {
+        margin-top: 16px;
+        padding-top: 16px;
+        border-top: 1px solid #1F1F1F;
+        font-size: 12px;
+        color: #52525B;
+        line-height: 1.6;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+        width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+        background: #0A0A0A;
+    }
+    ::-webkit-scrollbar-thumb {
+        background: #2A2A2A;
+        border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+        background: #3F3F46;
+    }
+</style>
+
 <script>
-    // ========== Fix 1: Smooth append-only log streaming ==========
+    // ========== Live log streaming ==========
     let lastLogId = 0;
 
-    // Initialize lastLogId from existing entries
-    document.querySelectorAll('#agent-logs .log-entry').forEach(el => {
+    document.querySelectorAll('#agent-logs .log-entry-large').forEach(el => {
         const id = parseInt(el.dataset.logId || '0');
         if (id > lastLogId) lastLogId = id;
     });
 
     function getLogClass(msg) {
-        if (msg.includes('⚠️') || msg.includes('WARNING') || msg.includes('LOW CREDIT')) return 'warning';
-        if (msg.toLowerCase().includes('error') || msg.toLowerCase().includes('failed') || msg.includes('💀')) return 'error';
-        if (msg.includes('💰') || msg.includes('provisioned') || msg.includes('📊')) return 'success';
-        if (msg.includes('🔬')) return 'research';
-        return 'system';
+        if (msg.includes('⚠️') || msg.includes('WARNING') || msg.includes('LOW CREDIT')) return 'log-warning';
+        if (msg.toLowerCase().includes('error') || msg.toLowerCase().includes('failed') || msg.includes('💀')) return 'log-error';
+        if (msg.includes('💰') || msg.includes('provisioned') || msg.includes('📊')) return 'log-success';
+        if (msg.includes('🔬')) return 'log-research';
+        return 'log-system';
     }
 
     async function pollLogs() {
@@ -234,8 +878,7 @@
             if (!Array.isArray(newLogs) || newLogs.length === 0) return;
 
             const container = document.getElementById('agent-logs');
-            // Remove empty state if present
-            const emptyState = container.querySelector('.empty-state');
+            const emptyState = container.querySelector('.empty-state-log');
             if (emptyState) emptyState.remove();
 
             for (const log of newLogs) {
@@ -243,29 +886,21 @@
                 lastLogId = log.id;
 
                 const div = document.createElement('div');
-                div.className = `log-entry ${getLogClass(log.message)} slide-in`;
+                div.className = `log-entry-large ${getLogClass(log.message)} slide-in`;
                 div.dataset.logId = log.id;
                 div.innerHTML = `
-                    <span class="log-ts">${(log.ts || '').slice(-8)}</span>
-                    <span class="log-user">${log.user_id || 'system'}</span>
-                    <span class="log-msg">${log.message}</span>
+                    <span class="log-timestamp">${(log.ts || '').slice(-8)}</span>
+                    <span class="log-user-tag">${log.user_id || 'system'}</span>
+                    <span class="log-message">${log.message}</span>
                 `;
                 container.appendChild(div);
             }
 
-            // Auto-scroll
             container.scrollTop = container.scrollHeight;
-
-            // Pulse the LIVE indicator
-            const pulse = document.getElementById('log-pulse');
-            if (pulse) {
-                pulse.classList.add('flash');
-                setTimeout(() => pulse.classList.remove('flash'), 400);
-            }
-        } catch(e) { /* ignore fetch errors */ }
+        } catch(e) { /* ignore */ }
     }
 
-    // ========== Live state poller (users, stats, battery) ==========
+    // ========== Live state polling (users, stats) ==========
     async function pollState() {
         try {
             const resp = await fetch('/state');
@@ -280,66 +915,58 @@
             if (statPaused) statPaused.textContent = data.stats.paused;
             if (statTotal) statTotal.textContent = data.stats.total;
 
-            // Update each user card
+            // Update each user row
             for (const user of data.users) {
-                const card = document.querySelector(`.user-card[data-user-id="${user.user_id}"]`);
-                if (!card) continue;
+                const row = document.querySelector(`.user-row-large[data-user-id="${user.user_id}"]`);
+                if (!row) continue;
 
-                const pct = user.initial_balance > 0
-                    ? (user.balance_usdc / user.initial_balance * 100) : 0;
+                const pct = user.initial_balance > 0 ? (user.balance_usdc / user.initial_balance * 100) : 0;
 
-                // Update battery fill
-                const fill = card.querySelector('.battery-fill');
+                // Update battery
+                const fill = row.querySelector('.battery-fill-large');
                 if (fill) {
-                    fill.style.height = `${Math.max(0, Math.min(100, pct))}%`;
-                    fill.className = 'battery-fill ' + (
+                    fill.style.width = `${Math.max(0, Math.min(100, pct))}%`;
+                    fill.className = 'battery-fill-large ' + (
                         pct > 50 ? 'healthy' :
                         pct > 20 ? 'caution' :
                         pct > 10 ? 'low' :
                         pct > 0 ? 'critical' : 'dead'
                     );
-                    // Add draining animation when actively depleting
-                    const battery = card.querySelector('.battery');
-                    if (battery) {
-                        if (pct < 20 && pct > 0) {
-                            battery.classList.add('draining');
-                        } else {
-                            battery.classList.remove('draining');
-                        }
-                    }
                 }
 
-                // Update balance label
-                const label = card.querySelector('.battery-label');
+                // Update balance
+                const label = row.querySelector('.balance-display');
                 if (label) {
                     label.textContent = `$${user.balance_usdc.toFixed(2)}`;
                     label.dataset.balance = user.balance_usdc.toFixed(2);
                 }
 
-                // Update status badge
-                const badgeContainer = card.querySelector('.user-status-badge');
+                const percent = row.querySelector('.balance-percent');
+                if (percent) {
+                    percent.textContent = `${Math.floor(pct)}%`;
+                }
+
+                // Update status
+                const badgeContainer = row.querySelector('.user-status-badge');
                 if (badgeContainer) {
                     const oldStatus = badgeContainer.dataset.status;
                     if (oldStatus !== user.status) {
                         badgeContainer.dataset.status = user.status;
                         const badgeMap = {
-                            active:      '<span class="badge badge-active">● Active</span>',
-                            low_credit:  '<span class="badge badge-warning">⚠ Low</span>',
-                            paused:      '<span class="badge badge-paused">⏸ Paused</span>',
-                            restoring:   '<span class="badge badge-restoring">🔄 Restoring</span>',
+                            active:      '<span class="status-pill status-active">● Active</span>',
+                            low_credit:  '<span class="status-pill status-low">⚠ Low</span>',
+                            paused:      '<span class="status-pill status-paused">⏸ Hibernated</span>',
+                            restoring:   '<span class="status-pill status-restoring">🔄 Restoring</span>',
                         };
                         badgeContainer.innerHTML = badgeMap[user.status] ||
-                            `<span class="badge badge-provisioning">⏳ ${user.status}</span>`;
-                        // Flash animation on status change
-                        badgeContainer.classList.add('status-changed');
-                        setTimeout(() => badgeContainer.classList.remove('status-changed'), 600);
+                            `<span class="status-pill status-provisioning">⏳ ${user.status}</span>`;
                     }
                 }
             }
         } catch(e) { /* ignore */ }
     }
 
-    // ========== Research findings poller ==========
+    // ========== Research polling ==========
     let lastResearchId = 0;
 
     async function pollResearch() {
@@ -350,37 +977,28 @@
             if (!data.result) return;
 
             const r = data.result;
-            // Check if this is new
             const key = `${r.user_id}-${r.created_at}`;
             if (key === lastResearchId) return;
             lastResearchId = key;
 
             const container = document.getElementById('research-content');
             const sourcesHtml = (r.sources || []).map(s =>
-                `<div class="research-source">
-                    <a href="${s.url}" target="_blank" rel="noopener">${s.title || s.url}</a>
+                `<div style="font-size: 11px; padding: 4px 0; border-bottom: 1px solid #1F1F1F;">
+                    <a href="${s.url}" target="_blank" rel="noopener" style="color: #00B8D9; text-decoration: none;">${s.title || s.url}</a>
                 </div>`
             ).join('');
 
             container.innerHTML = `
-                <div class="research-result slide-in">
-                    <div class="research-meta">
-                        <span class="badge badge-${r.budget_mode === 'budget' ? 'warning' : 'active'}"
-                              style="font-size: 10px;">${r.budget_mode} mode</span>
-                        <span style="font-size: 11px; color: var(--text-muted);">${r.sources_used} sources · ${r.created_at.slice(-8)}</span>
+                <div style="font-size: 13px; animation: slideIn 0.4s ease;">
+                    <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 12px;">
+                        <span class="status-pill status-${r.budget_mode === 'budget' ? 'low' : 'active'}" style="font-size: 10px;">${r.budget_mode} mode</span>
+                        <span style="font-size: 11px; color: #71717A;">${r.sources_used} sources · ${r.created_at.slice(-8)}</span>
                     </div>
-                    <div class="research-topic">${r.topic}</div>
-                    <div class="research-digest">${r.digest.replace(/\n/g, '<br>')}</div>
-                    ${sourcesHtml ? `<div class="research-sources-title">Sources:</div>${sourcesHtml}` : ''}
+                    <div style="font-weight: 600; font-size: 15px; margin-bottom: 10px; color: #00B8D9;">${r.topic}</div>
+                    <div style="font-size: 13px; line-height: 1.6; color: #A1A1AA; max-height: 200px; overflow-y: auto; padding-right: 8px;">${r.digest.replace(/\n/g, '<br>')}</div>
+                    ${sourcesHtml ? `<div style="font-size: 11px; font-weight: 600; color: #52525B; margin-top: 12px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">Sources:</div>${sourcesHtml}` : ''}
                 </div>
             `;
-
-            // Flash the panel
-            const panel = document.getElementById('research-panel');
-            if (panel) {
-                panel.classList.add('research-new');
-                setTimeout(() => panel.classList.remove('research-new'), 1500);
-            }
         } catch(e) { /* ignore */ }
     }
 
@@ -410,24 +1028,23 @@
                 throw new Error(err.detail || `HTTP ${resp.status}`);
             }
 
-            resultDiv.innerHTML = '<div style="color: var(--success); font-size: 13px;">✅ User provisioned! Reloading...</div>';
+            resultDiv.innerHTML = '<div style="color: #10B981; font-size: 13px;">✓ User provisioned! Reloading...</div>';
             resultDiv.style.display = 'block';
             setTimeout(() => window.location.reload(), 1500);
         } catch (err) {
-            resultDiv.innerHTML = `<div style="color: var(--danger); font-size: 13px;">❌ ${err.message}</div>`;
+            resultDiv.innerHTML = `<div style="color: #EF4444; font-size: 13px;">✗ ${err.message}</div>`;
             resultDiv.style.display = 'block';
         } finally {
-            btn.textContent = 'Provision Container';
+            btn.innerHTML = '<span class="btn-icon-left">+</span>Provision Container';
             btn.disabled = false;
         }
     });
 
-    // ========== Start all pollers ==========
+    // ========== Start pollers ==========
     setInterval(pollLogs, 2000);
     setInterval(pollState, 2000);
     setInterval(pollResearch, 5000);
 
-    // Initial polls
     setTimeout(pollLogs, 500);
     setTimeout(pollState, 500);
     setTimeout(pollResearch, 1000);

@@ -6,8 +6,16 @@ from functools import wraps
 from . import state
 from . import wallet
 from . import lifecycle
-from .notifications import send_agentmail_warning
+from .notifications import send_agentmail_notification
 from .exceptions import DripInsufficientCredits, DripUserNotFound
+
+@dataclass
+class DripSubscriptionConfig:
+    monthly_cost_usdc: float      # e.g., 20.0
+    included_units: int           # e.g., 1000
+    overage_cost_per_unit: float  # e.g., 0.007
+    cycle_day: int = 1            # which day of month billing resets
+
 
 @dataclass
 class DripConfig:
@@ -18,6 +26,7 @@ class DripConfig:
     bwl_api_base: str = "https://beta-api.buildwithlocus.com"
     poll_interval_seconds: int = 60
     mock_drain: bool = False
+    api_key: Optional[str] = None  # Unified Drip API key (Future)
 
 class DripClient:
     def __init__(self, config: DripConfig):
@@ -31,8 +40,11 @@ class DripClient:
         self,
         user_id: str,
         email: str,
+        plan: str = "consumption",
         initial_balance: float = 0.0,
-        credit_rate: float = 0.05,
+        consumption_unit_cost: float = 0.01,
+        subscription_cost: float = 0.0,
+        included_units: int = 0,
         container_image: Optional[str] = None,
         metadata: Optional[dict] = None
     ) -> dict:
@@ -42,13 +54,15 @@ class DripClient:
         if existing:
             return existing
 
-        topic = metadata.get("topic", "N/A") if metadata else "N/A"
         user = await state.create_user(
             user_id=user_id,
             email=email,
-            topic=topic,
+            metadata=metadata or {},
             initial_balance=initial_balance,
-            credit_rate=credit_rate
+            consumption_unit_cost=consumption_unit_cost,
+            plan=plan,
+            subscription_cost=subscription_cost,
+            included_units=included_units
         )
         
         await state.add_log(user_id, f"new user registered — balance: {initial_balance:.2f} USDC")
@@ -138,8 +152,19 @@ class DripClient:
         if user["status"] == "paused" and user["balance_usdc"] > 0:
             await self.restore(user_id)
 
-    def meter(self, cost: float, event: str, user_id_param: str = "user_id"):
-        """Decorator to meter an async function."""
+    def meter(
+        self,
+        cost: float,
+        event: str,
+        user_id_param: str = "user_id",
+        unit: int = 1,
+        label: Optional[str] = None,
+        dry_run: bool = False
+    ):
+        """Decorator to meter an async function.
+        
+        Supports unit tracking for subscription plans.
+        """
         def decorator(func):
             @wraps(func)
             async def wrapper(*args, **kwargs):
@@ -147,7 +172,12 @@ class DripClient:
                 if not user_id:
                     raise ValueError(f"Missing kwarg {user_id_param}")
 
-                await self.debit(user_id, cost, event)
+                if not dry_run:
+                    # Debit balance (for consumption or overages)
+                    await self.debit(user_id, cost, label or event)
+                    # Track units (for subscription quotas)
+                    await state.increment_units(user_id, unit)
+                
                 return await func(*args, **kwargs)
             return wrapper
         return decorator
@@ -164,22 +194,38 @@ class DripClient:
                 for user in users:
                     user_id = user["user_id"]
 
-                    # Handle Low Credit / Teardown
+                    # 1. Handle Low Credit / Teardown
                     pct = user["balance_usdc"] / max(user["initial_balance"], 0.01)
                     if pct <= 0 and user["status"] == "active":
                         await state.add_log(user_id, "balance depleted — triggering teardown")
                         await self.hibernate(user_id)
-                        await send_agentmail_warning(
+                        await send_agentmail_notification(
                             self.config.locus_api_base, self.config.locus_api_key, self.config.agentmail_inbox,
-                            user_id, user["email"], user["balance_usdc"], "paused", {"topic": user["topic"]}
+                            user_id, user["email"], user["balance_usdc"], "paused", user.get("metadata")
                         )
                     elif 0 < pct <= 0.2 and user["status"] == "active":
                         await state.set_status(user_id, "low_credit")
                         await state.add_log(user_id, f"balance <20% ({user['balance_usdc']:.2f}) — sending warning")
-                        await send_agentmail_warning(
+                        await send_agentmail_notification(
                             self.config.locus_api_base, self.config.locus_api_key, self.config.agentmail_inbox,
-                            user_id, user["email"], user["balance_usdc"], "low_credit", {"topic": user["topic"]}
+                            user_id, user["email"], user["balance_usdc"], "low_credit", user.get("metadata")
                         )
+
+                    # 2. Plan Optimization Intelligence (Hybrid Billing)
+                    # If user is on 'consumption' but trending towards 'subscription' being cheaper
+                    if user["plan"] == "consumption" and user["subscription_monthly_cost"] > 0:
+                        usage = await state.get_billing_period_usage(user_id)
+                        units = usage.get("units_consumed", 0)
+                        cost_so_far = units * user["credit_rate"] # using credit_rate as per-unit cost
+                        
+                        if cost_so_far >= user["subscription_monthly_cost"] * 0.8:
+                            # User is at 80% of subscription cost — suggest switch
+                            await state.add_log(user_id, f"intelligence: user usage ({cost_so_far:.2f}) approaching subscription cost ({user['subscription_monthly_cost']:.2f})")
+                            # Only suggest once per period (could track this in metadata)
+                            await send_agentmail_notification(
+                                self.config.locus_api_base, self.config.locus_api_key, self.config.agentmail_inbox,
+                                user_id, user["email"], user["balance_usdc"], "plan_suggestion", user.get("metadata")
+                            )
 
                 # Periodic master wallet check (every 10 cycles)
                 if cycle_count % 10 == 0:

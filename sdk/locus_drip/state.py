@@ -42,6 +42,13 @@ async def init_tables():
             balance_usdc REAL DEFAULT 0.0,
             initial_balance REAL DEFAULT 0.0,
             credit_rate REAL DEFAULT 0.05,
+            plan TEXT DEFAULT 'consumption',
+            plan_policy TEXT DEFAULT 'suggest_only',
+            subscription_monthly_cost REAL DEFAULT 0.0,
+            subscription_included_units INTEGER DEFAULT 0,
+            overage_cost_per_unit REAL DEFAULT 0.0,
+            billing_period_start INTEGER,
+            billing_period_units_consumed INTEGER DEFAULT 0,
             created_at INTEGER DEFAULT (strftime('%s', 'now'))
         );
 
@@ -65,14 +72,28 @@ async def init_tables():
 
 # --- User CRUD ---
 
-async def create_user(user_id: str, email: str, topic: str,
-                      initial_balance: float, credit_rate: float) -> dict:
-    """Insert a new user row."""
+async def create_user(user_id: str, email: str, metadata: dict = {},
+                      initial_balance: float = 0.0, consumption_unit_cost: float = 0.01,
+                      plan: str = "consumption", subscription_cost: float = 0.0,
+                      included_units: int = 0) -> dict:
+    """Insert a new user row with billing plan support."""
     db = await get_db()
+    import json
+    metadata_json = json.dumps(metadata)
+    now = int(time.time())
+    
     await db.execute(
-        """INSERT INTO users (user_id, email, topic, balance_usdc, initial_balance, credit_rate)
-           VALUES (?, ?, ?, ?, ?, ?)""",
-        (user_id, email, topic, initial_balance, initial_balance, credit_rate),
+        """INSERT INTO users (
+            user_id, email, topic, balance_usdc, initial_balance, 
+            credit_rate, plan, subscription_monthly_cost, 
+            subscription_included_units, billing_period_start
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (
+            user_id, email, metadata_json, initial_balance, initial_balance, 
+            consumption_unit_cost, plan, subscription_cost, 
+            included_units, now
+        ),
     )
     await db.commit()
     return await get_user(user_id)
@@ -151,6 +172,45 @@ async def credit_balance(user_id: str, amount: float):
         (amount, user_id),
     )
     await db.commit()
+
+
+async def increment_units(user_id: str, units: int = 1):
+    """Track unit consumption (for subscription tier usage)."""
+    db = await get_db()
+    await db.execute(
+        "UPDATE users SET billing_period_units_consumed = billing_period_units_consumed + ? WHERE user_id = ?",
+        (units, user_id),
+    )
+    await db.commit()
+
+
+async def reset_billing_period(user_id: str):
+    """Reset period counters at billing cycle boundary."""
+    db = await get_db()
+    now = int(time.time())
+    await db.execute(
+        """UPDATE users SET 
+           billing_period_start = ?, 
+           billing_period_units_consumed = 0 
+           WHERE user_id = ?""",
+        (now, user_id),
+    )
+    await db.commit()
+
+
+async def get_billing_period_usage(user_id: str) -> dict:
+    """Return usage stats for current billing period."""
+    user = await get_user(user_id)
+    if not user:
+        return {}
+    
+    return {
+        "start": user.get("billing_period_start"),
+        "units_consumed": user.get("billing_period_units_consumed", 0),
+        "included_units": user.get("subscription_included_units", 0),
+        "plan": user.get("plan"),
+        "monthly_cost": user.get("subscription_monthly_cost", 0.0)
+    }
 
 
 # --- Agent Logs ---
