@@ -18,7 +18,12 @@
       "Bash(curl -s http://localhost:4321)",
       "Bash(pkill -f \"astro dev\")",
       "Bash(mv postcss.config.js postcss.config.cjs)",
-      "Bash(mv tailwind.config.js tailwind.config.cjs)"
+      "Bash(mv tailwind.config.js tailwind.config.cjs)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Skill(browse)",
+      "Bash(python3 *)",
+      "Read(//Users/shagunprasad/Desktop/dev/drip-landing/**)"
     ]
   }
 }
