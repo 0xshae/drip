@@ -11,6 +11,11 @@ Users deposit USDC credits. Your app runs. Credits drain on actual compute event
 - `locusmeter/` — the core Drip agent server (deployed on BuildWithLocus)
 - `smoke_test.py` — full lifecycle verification
 
+## Hackathon Submission Requirements
+
+- **Video Demo**: [Watch the 3-minute demo here](#) *(Add link before submission)*
+- **Business Plan**: [Read the Drip Commercial Potential Summary](BUSINESS_PLAN.md)
+
 ## Quick start for developers
 
 ```bash
