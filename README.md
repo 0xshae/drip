@@ -62,25 +62,25 @@ flowchart TD
     A[User Deposits USDC via PayWithLocus Checkout] --> B[Credits Land in Drip Ledger]
     B --> C[Drip Provisions User Container via BuildWithLocus]
     C --> D[User Uses Application]
-    D --> E[@meter Decorator Debits Credits per Function Call]
+    D --> E["@meter Decorator Debits Credits per Function Call"]
     E --> F{Drip Agent Polls Balance Every 60s}
     
-    F -- "Balance > 20%" --> G[Container Active<br>AgentMail Warnings at Low Credit]
-    F -- "Balance ≤ 20%" --> H[Low Credit Status<br>AgentMail Warning Sent]
-    F -- "Balance = 0" --> I[Drip Hibernates Container<br>minInstances: 0]
-    I --> J[User Receives Pause Notification<br>State Preserved in Postgres]
+    F -- "Balance > 20%" --> G["Container Active<br>AgentMail Warnings at Low Credit"]
+    F -- "Balance ≤ 20%" --> H["Low Credit Status<br>AgentMail Warning Sent"]
+    F -- "Balance = 0" --> I["Drip Hibernates Container<br>minInstances: 0"]
+    I --> J["User Receives Pause Notification<br>State Preserved in Postgres"]
     J --> K[User Top-up via CheckoutWithLocus]
     K --> L[Credits Added to Ledger]
-    L --> M[Drip Restores Container<br>minInstances: 1]
+    L --> M["Drip Restores Container<br>minInstances: 1"]
     M --> D
     
     G --> E
     
     subgraph Locus Stack
-        P[PayWithLocus Wallet<br>Master non-custodial USDC balance]
-        Q[BuildWithLocus API<br>Container lifecycle control]
-        R[AgentMail<br>User notifications]
-        S[Wrapped APIs<br>Exa, Firecrawl, Claude]
+        P["PayWithLocus Wallet<br>Master non-custodial USDC balance"]
+        Q["BuildWithLocus API<br>Container lifecycle control"]
+        R["AgentMail<br>User notifications"]
+        S["Wrapped APIs<br>Exa, Firecrawl, Claude"]
     end
     
     P -- "Funds all wrapped API calls" --> E
