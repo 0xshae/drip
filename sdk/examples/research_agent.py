@@ -3,8 +3,8 @@ Example: A pay-per-use Research Agent using the Drip SDK.
 """
 import asyncio
 import os
-from drip import DripClient, DripConfig
-from drip.exceptions import DripInsufficientCredits
+from locus_drip import DripClient, DripConfig
+from locus_drip.exceptions import DripInsufficientCredits
 
 client = DripClient(DripConfig(
     locus_api_key=os.environ.get("LOCUS_API_KEY", ""),

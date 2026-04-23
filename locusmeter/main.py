@@ -29,7 +29,7 @@ from locusmeter.models import (
 
 import sys
 sys.path.append(str(Path(__file__).parent.parent / "sdk"))
-from drip import DripClient, DripConfig
+from locus_drip import DripClient, DripConfig
 
 client = DripClient(DripConfig(
     locus_api_key=os.environ.get("LOCUS_API_KEY", ""),

@@ -5,8 +5,8 @@ No credits = no jokes.
 """
 import os
 from fastapi import FastAPI, HTTPException
-from drip import DripClient, DripConfig
-from drip.exceptions import DripInsufficientCredits
+from locus_drip import DripClient, DripConfig
+from locus_drip.exceptions import DripInsufficientCredits
 import httpx
 
 app = FastAPI()

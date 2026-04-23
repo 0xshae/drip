@@ -1,6 +1,6 @@
-# drip-sdk — Pay-as-you-go compute middleware for BuildWithLocus apps
+# locus-drip — Pay-as-you-go compute middleware for BuildWithLocus apps
 
-Drip is a middleware SDK that transforms any BuildWithLocus application into a pay-as-you-go service. It automatically tracks API usage, deducts credits based on compute events, and intelligently hibernates user containers when their balance runs out.
+Locus Drip is a middleware SDK that transforms any BuildWithLocus application into a pay-as-you-go service. It automatically tracks API usage, deducts credits based on compute events, and intelligently hibernates user containers when their balance runs out.
 
 ## Prerequisites
 - A BuildWithLocus account and Developer API Key
@@ -11,7 +11,7 @@ Drip is a middleware SDK that transforms any BuildWithLocus application into a p
 ## Installation
 
 ```bash
-pip install drip-sdk
+pip install locus-drip
 ```
 
 ## Quick Start
@@ -21,8 +21,8 @@ Here is a minimal example of integrating Drip into a FastAPI application:
 ```python
 import os
 from fastapi import FastAPI, HTTPException
-from drip import DripClient, DripConfig
-from drip.exceptions import DripInsufficientCredits
+from locus_drip import DripClient, DripConfig
+from locus_drip.exceptions import DripInsufficientCredits
 import httpx
 
 app = FastAPI()

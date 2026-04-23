@@ -3,7 +3,7 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.backends.legacy:build"
 
 [project]
-name = "drip-sdk"
+name = "locus-drip"
 version = "0.1.0"
 description = "Pay-as-you-go compute middleware for BuildWithLocus apps"
 readme = "README.md"

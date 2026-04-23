@@ -11,7 +11,7 @@ import time
 from typing import Optional, List
 from pathlib import Path
 
-DB_PATH = Path("drip.db")
+DB_PATH = Path("locus_drip.db")
 _db: Optional[aiosqlite.Connection] = None
 
 
