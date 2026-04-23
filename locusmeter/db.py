@@ -77,6 +77,28 @@ async def init_tables():
             sources_used INTEGER DEFAULT 0,
             created_at TEXT NOT NULL
         );
+
+        CREATE TABLE IF NOT EXISTS saas_accounts (
+            account_id TEXT PRIMARY KEY,
+            email TEXT UNIQUE NOT NULL,
+            company_name TEXT,
+            bwl_api_key_encrypted TEXT,
+            webhook_url TEXT,
+            is_onboarded INTEGER DEFAULT 0,
+            created_at INTEGER DEFAULT (strftime('%s', 'now'))
+        );
+
+        CREATE TABLE IF NOT EXISTS magic_tokens (
+            token TEXT PRIMARY KEY,
+            email TEXT NOT NULL,
+            account_id TEXT,
+            created_at INTEGER DEFAULT (strftime('%s', 'now')),
+            expires_at INTEGER NOT NULL,
+            used_at INTEGER
+        );
+
+        -- Add saas_account_id to users if not exists
+        ALTER TABLE users ADD COLUMN saas_account_id TEXT;
     """)
     await db.commit()
 
@@ -337,3 +359,107 @@ async def close_db():
     if _db is not None:
         await _db.close()
         _db = None
+
+
+# --- SaaS Accounts ---
+
+async def create_saas_account(account_id: str, email: str, company_name: str = None) -> dict:
+    """Create a new SaaS account."""
+    db = await get_db()
+    await db.execute(
+        "INSERT INTO saas_accounts (account_id, email, company_name) VALUES (?, ?, ?)",
+        (account_id, email, company_name),
+    )
+    await db.commit()
+    return await get_saas_account(account_id)
+
+
+async def get_saas_account(account_id: str) -> Optional[dict]:
+    """Get a SaaS account by ID."""
+    db = await get_db()
+    cursor = await db.execute("SELECT * FROM saas_accounts WHERE account_id = ?", (account_id,))
+    row = await cursor.fetchone()
+    return dict(row) if row else None
+
+
+async def get_saas_account_by_email(email: str) -> Optional[dict]:
+    """Get a SaaS account by email."""
+    db = await get_db()
+    cursor = await db.execute("SELECT * FROM saas_accounts WHERE email = ?", (email,))
+    row = await cursor.fetchone()
+    return dict(row) if row else None
+
+
+async def update_saas_onboarding(account_id: str, company_name: str = None,
+                                  bwl_api_key_encrypted: str = None, webhook_url: str = None):
+    """Update SaaS account with onboarding details."""
+    db = await get_db()
+    await db.execute(
+        """UPDATE saas_accounts SET
+            company_name = COALESCE(?, company_name),
+            bwl_api_key_encrypted = COALESCE(?, bwl_api_key_encrypted),
+            webhook_url = COALESCE(?, webhook_url),
+            is_onboarded = 1
+        WHERE account_id = ?""",
+        (company_name, bwl_api_key_encrypted, webhook_url, account_id),
+    )
+    await db.commit()
+
+
+# --- Magic Tokens ---
+
+async def create_magic_token(token: str, email: str, expires_at: int) -> str:
+    """Create a new magic link token."""
+    db = await get_db()
+    await db.execute(
+        "INSERT INTO magic_tokens (token, email, expires_at) VALUES (?, ?, ?)",
+        (token, email, expires_at),
+    )
+    await db.commit()
+    return token
+
+
+async def get_magic_token(token: str) -> Optional[dict]:
+    """Get a magic token if valid and unused."""
+    db = await get_db()
+    now = int(time.time())
+    cursor = await db.execute(
+        "SELECT * FROM magic_tokens WHERE token = ? AND expires_at > ? AND used_at IS NULL",
+        (token, now),
+    )
+    row = await cursor.fetchone()
+    return dict(row) if row else None
+
+
+async def mark_magic_token_used(token: str, account_id: str = None):
+    """Mark a magic token as used."""
+    db = await get_db()
+    now = int(time.time())
+    await db.execute(
+        "UPDATE magic_tokens SET used_at = ?, account_id = ? WHERE token = ?",
+        (now, account_id, token),
+    )
+    await db.commit()
+
+
+# --- Users by SaaS Account ---
+
+async def get_users_by_saas_account(account_id: str) -> List[dict]:
+    """Get all end-users belonging to a SaaS account."""
+    db = await get_db()
+    cursor = await db.execute(
+        "SELECT * FROM users WHERE saas_account_id = ? ORDER BY created_at DESC",
+        (account_id,),
+    )
+    rows = await cursor.fetchall()
+    return [dict(r) for r in rows]
+
+
+async def link_user_to_saas(user_id: str, saas_account_id: str):
+    """Link an existing user to a SaaS account."""
+    db = await get_db()
+    await db.execute(
+        "UPDATE users SET saas_account_id = ? WHERE user_id = ?",
+        (saas_account_id, user_id),
+    )
+    await db.commit()

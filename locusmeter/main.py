@@ -16,12 +16,17 @@ from pathlib import Path
 from dotenv import load_dotenv
 load_dotenv()
 
-from fastapi import FastAPI, Request, HTTPException, Form
+from fastapi import FastAPI, Request, HTTPException, Form, Depends
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from pydantic import BaseModel
 
 from locusmeter import db
+from locusmeter.auth import (
+    generate_magic_token, generate_account_id, set_session_cookie,
+    clear_session_cookie, get_current_user, SESSION_MAX_AGE
+)
 from locusmeter.models import (
     UserCreate, UserResponse, DebitRequest,
     CheckoutSessionCreate,
@@ -36,6 +41,16 @@ client = DripClient(DripConfig(
     bwl_api_key=os.environ.get("BWL_API_KEY", ""),
     agentmail_inbox=os.environ.get("AGENTMAIL_INBOX", "ricc@agentmail.to"),
 ))
+
+# Request models for auth
+class MagicLinkRequest(BaseModel):
+    email: str
+    company_name: str = None
+
+class OnboardRequest(BaseModel):
+    bwl_api_key: str
+    webhook_url: str = None
+    company_name: str = None
 
 # Template directory
 TEMPLATE_DIR = Path(__file__).parent.parent / "templates"
@@ -212,6 +227,146 @@ async def dashboard(request: Request):
         "users": users,
         "logs": logs,
     })
+
+
+# ---------- Auth Routes ----------
+
+@app.get("/signup", response_class=HTMLResponse)
+async def signup_page(request: Request):
+    """Sign up page with magic link form."""
+    return templates.TemplateResponse("signup.html", {"request": request})
+
+
+@app.post("/auth/magic")
+async def create_magic_link_endpoint(req: MagicLinkRequest):
+    """Create a magic link and "send" it (logs to console for demo)."""
+    import time
+    from cryptography.fernet import Fernet
+
+    # Generate token
+    token = generate_magic_token(req.email)
+    expires_at = int(time.time()) + 900  # 15 minutes
+
+    await db.create_magic_token(token, req.email, expires_at)
+
+    # In demo mode: log the link instead of sending email
+    magic_url = f"/auth/verify?token={token}"
+    print(f"\n{'='*60}")
+    print(f"MAGIC LINK for {req.email}")
+    print(f"URL: {magic_url}")
+    print(f"{'='*60}\n")
+
+    return {"ok": True, "message": "Check your email (logged to console for demo)"}
+
+
+@app.get("/auth/verify")
+async def verify_magic_link(request: Request, token: str):
+    """Verify magic link and create session."""
+    magic = await db.get_magic_token(token)
+    if not magic:
+        raise HTTPException(400, "Invalid or expired magic link")
+
+    email = magic["email"]
+
+    # Check if account exists, create if not
+    account = await db.get_saas_account_by_email(email)
+    if not account:
+        account_id = generate_account_id()
+        account = await db.create_saas_account(account_id, email)
+
+        # Generate demo data for new account
+        await _create_demo_data(account_id)
+
+    account_id = account["account_id"]
+    await db.mark_magic_token_used(token, account_id)
+
+    # Create session and redirect
+    response = RedirectResponse(
+        url="/onboard" if not account.get("is_onboarded") else "/admin/dashboard",
+        status_code=302
+    )
+    set_session_cookie(response, email, account_id)
+    return response
+
+
+@app.get("/onboard", response_class=HTMLResponse)
+async def onboard_page(request: Request):
+    """Onboarding page to connect BWL."""
+    user = get_current_user(request)
+    if not user:
+        return RedirectResponse(url="/signup", status_code=302)
+
+    account = await db.get_saas_account(user["account_id"])
+    return templates.TemplateResponse("onboard.html", {
+        "request": request,
+        "account": account,
+    })
+
+
+@app.post("/onboard")
+async def complete_onboarding(request: Request, req: OnboardRequest):
+    """Complete onboarding with BWL credentials."""
+    user = get_current_user(request)
+    if not user:
+        raise HTTPException(401, "Not authenticated")
+
+    # In production: encrypt the API key
+    # For demo: store as-is (it's demo data anyway)
+    encrypted_key = req.bwl_api_key  # TODO: Fernet encryption
+
+    await db.update_saas_onboarding(
+        user["account_id"],
+        company_name=req.company_name,
+        bwl_api_key_encrypted=encrypted_key,
+        webhook_url=req.webhook_url,
+    )
+
+    return {"ok": True}
+
+
+@app.post("/onboard/skip")
+async def skip_onboarding(request: Request):
+    """Skip onboarding and go to dashboard."""
+    user = get_current_user(request)
+    if not user:
+        return RedirectResponse(url="/signup", status_code=302)
+
+    await db.update_saas_onboarding(user["account_id"])
+    return RedirectResponse(url="/admin/dashboard", status_code=302)
+
+
+@app.get("/logout")
+async def logout():
+    """Clear session and redirect to home."""
+    response = RedirectResponse(url="/", status_code=302)
+    clear_session_cookie(response)
+    return response
+
+
+async def _create_demo_data(account_id: str):
+    """Generate synthetic end-users for a new SaaS account."""
+    import random
+
+    demo_users = [
+        {"id": f"user_{generate_account_id()[-8:]}", "email": "sarah@example.com", "topic": "Cloud infrastructure research"},
+        {"id": f"user_{generate_account_id()[-8:]}", "email": "mike@example.com", "topic": "AI model comparison"},
+        {"id": f"user_{generate_account_id()[-8:]}", "email": "alex@example.com", "topic": "Market analysis"},
+    ]
+
+    for demo in demo_users:
+        balance = round(random.uniform(0.5, 5.0), 2)
+        status = random.choice(["active", "active", "low_credit", "paused"])
+        await db.create_user(
+            user_id=demo["id"],
+            email=demo["email"],
+            metadata={"topic": demo["topic"]},
+            initial_balance=balance,
+            consumption_unit_cost=0.05,
+        )
+        await db.link_user_to_saas(demo["id"], account_id)
+        if status != "active":
+            await db.set_status(demo["id"], status)
+        await db.add_log(demo["id"], f"Demo user created with ${balance:.2f} balance")
 
 
 # ---------- Checkout ----------
@@ -448,6 +603,63 @@ async def demo_reset():
     await db.clear_logs()
     await db.add_log(None, "🔄 demo reset — all users and logs cleared")
     return {"ok": True, "deleted_users": deleted}
+
+
+# ---------- SaaS Admin Dashboard ----------
+
+@app.get("/admin/dashboard", response_class=HTMLResponse)
+async def saas_dashboard(request: Request):
+    """SaaS company dashboard showing their metrics and customer overview."""
+    user = get_current_user(request)
+    if not user:
+        return RedirectResponse(url="/signup", status_code=302)
+
+    account = await db.get_saas_account(user["account_id"])
+    if not account:
+        raise HTTPException(404, "Account not found")
+
+    # Get this account's end users
+    users = await db.get_users_by_saas_account(user["account_id"])
+
+    # Calculate metrics
+    active_users = [u for u in users if u["status"] in ("active", "low_credit")]
+    paused_users = [u for u in users if u["status"] == "paused"]
+
+    total_revenue = sum(u["initial_balance"] - u["balance_usdc"] for u in users)
+    total_credits = sum(u["balance_usdc"] for u in users)
+
+    # Mock tier-cliff saves (in real version, track these as events)
+    saves = [
+        {"user_id": "user_8472", "action": "Pro → Pay-as-you-go", "saved": 34},
+        {"user_id": "user_1923", "action": "Team → Enterprise", "saved": 127},
+    ] if len(users) > 2 else []
+
+    return templates.TemplateResponse("saas_dashboard.html", {
+        "request": request,
+        "account": account,
+        "users": users,
+        "metrics": {
+            "total_revenue": round(total_revenue, 2),
+            "active_count": len(active_users),
+            "paused_count": len(paused_users),
+            "total_credits": round(total_credits, 2),
+            "at_risk": len([u for u in users if u["status"] == "low_credit"]),
+        },
+        "saves": saves,
+    })
+
+
+@app.get("/admin/api-keys", response_class=HTMLResponse)
+async def api_keys_page(request: Request):
+    """Page to manage API keys."""
+    user = get_current_user(request)
+    if not user:
+        return RedirectResponse(url="/signup", status_code=302)
+
+    return templates.TemplateResponse("api_keys.html", {
+        "request": request,
+        "api_key": f"drip_{user['account_id']}_demo",
+    })
 
 
 if __name__ == "__main__":

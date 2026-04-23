@@ -1,0 +1,368 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard — {{ account.company_name or account.email }}{% endblock %}
+
+{% block content %}
+<!-- Top Navigation for Admin -->
+<nav style="background: var(--bg-secondary); border-bottom: 1px solid var(--border); padding: 12px 0; margin-bottom: 32px;">
+    <div class="container" style="display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; align-items: center; gap: 24px;">
+            <a href="/admin/dashboard" class="logo" style="text-decoration: none;">
+                <div class="logo-icon">+</div>
+                <span class="logo-text">drip</span>
+            </a>
+            <div style="display: flex; gap: 16px; border-left: 1px solid var(--border); padding-left: 24px;">
+                <a href="/admin/dashboard" class="nav-link active">Dashboard</a>
+                <a href="/dashboard" class="nav-link">Live Demo</a>
+                <a href="#" class="nav-link" onclick="alert('Coming soon'); return false;">Settings</a>
+            </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 16px;">
+            <span style="font-size: 13px; color: var(--text-secondary);">{{ account.email }}</span>
+            <a href="/logout" class="btn btn-secondary" style="font-size: 13px; padding: 6px 12px;">Logout</a>
+        </div>
+    </div>
+</nav>
+
+<style>
+    .nav-link {
+        font-size: 14px;
+        color: var(--text-secondary);
+        text-decoration: none;
+        padding: 6px 0;
+        border-bottom: 2px solid transparent;
+        transition: all 0.2s;
+    }
+    .nav-link:hover {
+        color: var(--text-primary);
+    }
+    .nav-link.active {
+        color: var(--accent-cyan);
+        border-bottom-color: var(--accent-cyan);
+    }
+</style>
+
+<section class="section">
+    <!-- Header -->
+    <div style="margin-bottom: 32px;">
+        <h1 style="font-size: 28px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px;">
+            {{ account.company_name or 'Your Company' }}
+        </h1>
+        <p style="color: var(--text-muted); font-size: 15px;">
+            Billing intelligence dashboard • {{ users|length }} active users
+        </p>
+    </div>
+
+    <!-- Metrics Cards -->
+    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 32px;">
+        <div class="metric-card">
+            <div class="metric-label">Revenue This Month</div>
+            <div class="metric-value">${{ "%.2f"|format(metrics.total_revenue) }}</div>
+            <div class="metric-change positive">+12% from last month</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Active Users</div>
+            <div class="metric-value">{{ metrics.active_count }}</div>
+            <div class="metric-sub">{{ metrics.paused_count }} hibernated</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Credits in Circulation</div>
+            <div class="metric-value">${{ "%.2f"|format(metrics.total_credits) }}</div>
+            <div class="metric-sub">Ready to spend</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">At-Risk Users</div>
+            <div class="metric-value {% if metrics.at_risk > 0 %}caution{% endif %}">{{ metrics.at_risk }}</div>
+            <div class="metric-sub">
+                {% if metrics.at_risk > 0 %}
+                    Need attention
+                {% else %}
+                    All clear
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .metric-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+        }
+        .metric-label {
+            font-size: 13px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+        .metric-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+        .metric-value.caution {
+            color: var(--accent-amber);
+        }
+        .metric-change {
+            font-size: 13px;
+            font-weight: 500;
+        }
+        .metric-change.positive {
+            color: var(--accent-green);
+        }
+        .metric-sub {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+    </style>
+
+    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px;">
+        <!-- Left Column: Customers -->
+        <div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h2 style="font-size: 18px; font-weight: 600; color: var(--text-primary);">
+                    Your Customers
+                </h2>
+                <a href="/admin/api-keys" class="btn btn-primary" style="font-size: 13px; padding: 8px 16px;">
+                    View API Keys
+                </a>
+            </div>
+
+            <div class="card" style="border-radius: 12px; overflow: hidden;">
+                {% if users %}
+                <table class="users-table">
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Status</th>
+                            <th>Balance</th>
+                            <th>Usage</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                        {% set pct = (user.balance_usdc / user.initial_balance * 100) if user.initial_balance > 0 else 0 %}
+                        {% set used = user.initial_balance - user.balance_usdc %}
+                        <tr>
+                            <td>
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <div class="user-avatar-small">{{ user.user_id[0]|upper }}</div>
+                                    <div>
+                                        <div style="font-weight: 500; color: var(--text-primary);">{{ user.user_id }}</div>
+                                        <div style="font-size: 12px; color: var(--text-muted);">{{ user.email }}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="status-badge status-{{ user.status }}">
+                                    {% if user.status == 'active' %}● Active
+                                    {% elif user.status == 'low_credit' %}⚠ Low Credit
+                                    {% elif user.status == 'paused' %}⏸ Hibernated
+                                    {% else %}{{ user.status }}{% endif %}
+                                </span>
+                            </td>
+                            <td>
+                                <div style="font-weight: 600;">${{ "%.2f"|format(user.balance_usdc) }}</div>
+                                <div class="battery-bar-small">
+                                    <div class="battery-fill-small {% if pct > 50 %}healthy{% elif pct > 20 %}caution{% else %}low{% endif %}"
+                                         style="width: {{ pct }}%"></div>
+                                </div>
+                            </td>
+                            <td>
+                                <div style="font-size: 13px; color: var(--text-secondary);">
+                                    ${{ "%.2f"|format(used) }} spent
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div style="padding: 60px 40px; text-align: center;">
+                    <div style="font-size: 48px; margin-bottom: 16px;">👥</div>
+                    <h3 style="color: var(--text-primary); margin-bottom: 8px;">No customers yet</h3>
+                    <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 24px;">
+                        Integrate the Drip SDK to start tracking your users
+                    </p>
+                    <a href="/admin/api-keys" class="btn btn-primary" style="font-size: 14px; padding: 10px 20px;">
+                        Get API Keys
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+
+            <style>
+                .users-table {
+                    width: 100%;
+                    border-collapse: collapse;
+                }
+                .users-table th {
+                    text-align: left;
+                    padding: 16px;
+                    font-size: 12px;
+                    font-weight: 600;
+                    color: var(--text-secondary);
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                    background: var(--bg-secondary);
+                    border-bottom: 1px solid var(--border);
+                }
+                .users-table td {
+                    padding: 16px;
+                    border-bottom: 1px solid var(--border);
+                    vertical-align: middle;
+                }
+                .users-table tr:last-child td {
+                    border-bottom: none;
+                }
+                .users-table tr:hover td {
+                    background: rgba(255,255,255,0.02);
+                }
+                .user-avatar-small {
+                    width: 36px;
+                    height: 36px;
+                    background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+                    border-radius: 8px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-weight: 600;
+                    color: var(--bg-primary);
+                    font-size: 14px;
+                }
+                .status-badge {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                    padding: 4px 10px;
+                    border-radius: 20px;
+                    font-size: 12px;
+                    font-weight: 500;
+                }
+                .status-active {
+                    background: rgba(16, 185, 129, 0.1);
+                    color: var(--accent-green);
+                }
+                .status-low_credit {
+                    background: rgba(245, 158, 11, 0.1);
+                    color: var(--accent-amber);
+                }
+                .status-paused {
+                    background: rgba(239, 68, 68, 0.1);
+                    color: var(--accent-red);
+                }
+                .battery-bar-small {
+                    width: 60px;
+                    height: 4px;
+                    background: var(--bg-secondary);
+                    border-radius: 2px;
+                    margin-top: 6px;
+                    overflow: hidden;
+                }
+                .battery-fill-small {
+                    height: 100%;
+                    border-radius: 2px;
+                    transition: width 0.3s;
+                }
+                .battery-fill-small.healthy { background: var(--accent-green); }
+                .battery-fill-small.caution { background: var(--accent-amber); }
+                .battery-fill-small.low { background: var(--accent-red); }
+            </style>
+        </div>
+
+        <!-- Right Column: Sidebar -->
+        <div>
+            <!-- Integration Status -->
+            <div class="card" style="border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+                <h3 style="font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.5px;">
+                    Integration Status
+                </h3>
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div style="width: 8px; height: 8px; background: var(--accent-green); border-radius: 50%;"></div>
+                        <span style="font-size: 14px; color: var(--text-secondary);">API Key Active</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div style="width: 8px; height: 8px; background: var(--accent-green); border-radius: 50%;"></div>
+                        <span style="font-size: 14px; color: var(--text-secondary);">SDK Connected</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div style="width: 8px; height: 8px; background: {% if account.webhook_url %}var(--accent-green){% else %}var(--text-muted){% endif %}; border-radius: 50%;"></div>
+                        <span style="font-size: 14px; color: var(--text-secondary);">
+                            Webhook {% if account.webhook_url %}Active{% else %}Not Configured{% endif %}
+                        </span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div style="width: 8px; height: 8px; background: var(--accent-green); border-radius: 50%;"></div>
+                        <span style="font-size: 14px; color: var(--text-secondary);">{{ users|length }} Users Metered</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tier-Cliff Saves -->
+            {% if saves %}
+            <div class="card" style="border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+                <h3 style="font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.5px;">
+                    Recent Saves
+                </h3>
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    {% for save in saves %}
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: var(--bg-secondary); border-radius: 8px;">
+                        <div>
+                            <div style="font-size: 13px; color: var(--text-primary); font-weight: 500;">{{ save.user_id }}</div>
+                            <div style="font-size: 12px; color: var(--text-secondary);">{{ save.action }}</div>
+                        </div>
+                        <div style="font-size: 14px; font-weight: 600; color: var(--accent-green);">
+                            ${{ save.saved }}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Quick Links -->
+            <div class="card" style="border-radius: 12px; padding: 20px;">
+                <h3 style="font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.5px;">
+                    Quick Links
+                </h3>
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <a href="https://docs.drip.dev" target="_blank" class="quick-link">
+                        <span>Documentation</span>
+                        <span>→</span>
+                    </a>
+                    <a href="https://github.com/drip/sdk" target="_blank" class="quick-link">
+                        <span>SDK on GitHub</span>
+                        <span>→</span>
+                    </a>
+                    <a href="mailto:support@drip.dev" class="quick-link">
+                        <span>Contact Support</span>
+                        <span>→</span>
+                    </a>
+                </div>
+            </div>
+
+            <style>
+                .quick-link {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 10px 12px;
+                    color: var(--text-secondary);
+                    text-decoration: none;
+                    border-radius: 6px;
+                    font-size: 14px;
+                    transition: all 0.2s;
+                }
+                .quick-link:hover {
+                    background: var(--bg-secondary);
+                    color: var(--text-primary);
+                }
+            </style>
+        </div>
+    </div>
+</section>
+{% endblock %}

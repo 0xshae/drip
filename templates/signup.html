@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+
+{% block title %}Sign Up{% endblock %}
+
+{% block content %}
+<section class="section" style="min-height: calc(100vh - 200px); display: flex; align-items: center; justify-content: center;">
+    <div style="max-width: 440px; width: 100%;">
+        <div style="text-align: center; margin-bottom: 40px;">
+            <div class="logo" style="justify-content: center; margin-bottom: 24px;">
+                <div class="logo-icon">+</div>
+                <span class="logo-text">drip</span>
+            </div>
+            <h1 style="font-size: 28px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px;">
+                Get started with Drip
+            </h1>
+            <p style="font-size: 16px; color: var(--text-secondary);">
+                Start monitoring your customers' usage in minutes
+            </p>
+        </div>
+
+        <div class="card" style="padding: 32px; border-radius: 16px;">
+            <form id="signup-form" class="provision-form">
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label class="form-label" style="display: flex; align-items: center; gap: 8px;">
+                        <span>Work email</span>
+                        <span style="color: var(--accent-cyan);">*</span>
+                    </label>
+                    <input
+                        type="email"
+                        id="email"
+                        class="form-input"
+                        placeholder="you@company.com"
+                        required
+                        style="padding: 14px 16px; font-size: 15px;"
+                    >
+                </div>
+
+                <div class="form-group" style="margin-bottom: 24px;">
+                    <label class="form-label" style="display: flex; align-items: center; gap: 8px;">
+                        <span>Company name</span>
+                        <span style="color: var(--text-dim); font-weight: 400;">(optional)</span>
+                    </label>
+                    <input
+                        type="text"
+                        id="company"
+                        class="form-input"
+                        placeholder="Acme Inc."
+                        style="padding: 14px 16px; font-size: 15px;"
+                    >
+                </div>
+
+                <button
+                    type="submit"
+                    id="submit-btn"
+                    class="btn btn-primary"
+                    style="width: 100%; padding: 14px; font-size: 15px; font-weight: 600;"
+                >
+                    Continue with email
+                </button>
+            </form>
+
+            <!-- Success state (hidden by default) -->
+            <div id="success-state" style="display: none; text-align: center; padding: 20px 0;">
+                <div style="width: 64px; height: 64px; background: rgba(16, 185, 129, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px;">
+                    <span style="font-size: 32px;">✉</span>
+                </div>
+                <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 12px; color: var(--text-primary);">
+                    Check your email
+                </h2>
+                <p style="color: var(--text-secondary); font-size: 15px; line-height: 1.6; margin-bottom: 8px;">
+                    We've sent a magic link to <strong id="success-email" style="color: var(--text-primary);"></strong>
+                </p>
+                <p style="color: var(--text-muted); font-size: 13px;">
+                    Click the link to sign in instantly. No password needed.
+                </p>
+                <div style="margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--border);">
+                    <p style="color: var(--text-muted); font-size: 13px;">
+                        Demo mode: Check server logs for the magic link URL
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <p style="text-align: center; margin-top: 24px; font-size: 13px; color: var(--text-muted);">
+            Already have an account?
+            <a href="#" onclick="document.getElementById('email').focus(); return false;" style="color: var(--accent-cyan); text-decoration: none;">
+                Sign in with email
+            </a>
+        </p>
+
+        <div style="display: flex; justify-content: center; gap: 24px; margin-top: 32px;">
+            <a href="/dashboard" class="btn btn-secondary" style="font-size: 13px; padding: 8px 16px;">
+                View Demo Dashboard
+            </a>
+            <a href="/" class="btn btn-secondary" style="font-size: 13px; padding: 8px 16px;">
+                Back to Home
+            </a>
+        </div>
+    </div>
+</section>
+
+<style>
+    .card {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+    }
+    .form-group {
+        margin-bottom: 16px;
+    }
+    .form-label {
+        display: block;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--text-secondary);
+        margin-bottom: 8px;
+    }
+    .form-input {
+        width: 100%;
+        padding: 12px 14px;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        color: var(--text-primary);
+        font-size: 14px;
+        font-family: inherit;
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .form-input:focus {
+        outline: none;
+        border-color: var(--accent-cyan);
+        box-shadow: 0 0 0 3px rgba(0, 184, 217, 0.1);
+    }
+    .form-input::placeholder {
+        color: var(--text-dim);
+    }
+    .btn-primary {
+        background: var(--accent-cyan);
+        color: var(--bg-primary);
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .btn-primary:hover {
+        background: #00a5c4;
+        transform: translateY(-1px);
+    }
+    .btn-primary:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+    }
+    .btn-secondary {
+        background: transparent;
+        color: var(--text-secondary);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        text-decoration: none;
+        transition: all 0.2s;
+    }
+    .btn-secondary:hover {
+        border-color: var(--text-muted);
+        color: var(--text-primary);
+    }
+</style>
+
+<script>
+    document.getElementById('signup-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('submit-btn');
+        const email = document.getElementById('email').value;
+        const company = document.getElementById('company').value;
+
+        btn.textContent = 'Sending link...';
+        btn.disabled = true;
+
+        try {
+            const resp = await fetch('/auth/magic', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, company_name: company }),
+            });
+
+            if (!resp.ok) {
+                const err = await resp.json();
+                throw new Error(err.detail || 'Failed to send magic link');
+            }
+
+            // Show success state
+            document.getElementById('signup-form').style.display = 'none';
+            document.getElementById('success-state').style.display = 'block';
+            document.getElementById('success-email').textContent = email;
+
+            // Scroll to top
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        } catch (err) {
+            btn.textContent = 'Continue with email';
+            btn.disabled = false;
+            alert(err.message);
+        }
+    });
+</script>
+{% endblock %}
