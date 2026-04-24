@@ -1,4 +1,4 @@
-# Drip: Pay-as-you-go Compute Infrastructure for Developers
+# Drip: Pay-as-you-go Compute Infrastructure for SaaS Developers
 
 ![Logo Placeholder](https://img.shields.io/badge/Drip-%2300A5FF.svg?style=flat&logo=drop&logoColor=white)
 ![Python](https://img.shields.io/badge/python-3.10+-3670A0?logo=python&logoColor=white)
@@ -6,9 +6,7 @@
 ![USDC](https://img.shields.io/badge/USDC-%237275F1.svg?logo=circle&logoColor=white)
 ![BuildWithLocus](https://img.shields.io/badge/BuildWithLocus-%231F2430.svg?logo=servicestack&logoColor=white)
 ![PayWithLocus](https://img.shields.io/badge/PayWithLocus-%233A86FF.svg?logo=circle&logoColor=white)
-
-[![Demo Video Placeholder](https://img.shields.io/badge/Demo-Video-blue)](https://your-demo-url.com)
-[![Live Demo](https://img.shields.io/badge/Live-Demo-green)](https://drip-landing-sooty.vercel.app)
+[![PyPi Version](https://img.shields.io/pypi/v/locus-drip.svg)](https://pypi.org/project/locus-drip/)
 
 ---
 
